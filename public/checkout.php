@@ -9,25 +9,43 @@ if (session_status() == PHP_SESSION_NONE) {
 
 $cart = $_SESSION['cart'] ?? [];
 $table_id = $_SESSION['table_id'] ?? null;
-$table_number = $_SESSION['table_number'] ?? null; // **NEW** read normalized key
+$table_number = $_SESSION['table_number'] ?? null; // Kunci yang dinormalisasi
 $total = 0;
 $error_message = '';
 
-// If only table_id exists, normalise to table_number so downstream code uses $_SESSION['table_number']
+// **PERBAIKAN: Logika normalisasi yang lebih baik**
+// Jika table_number tidak ada, tapi table_id ada (dari sesi lama/index.php lama)
 if (!$table_number && $table_id) {
-    $table_number = $table_id;
+    try {
+        // Coba ambil nama meja dari database
+        $stmt = $pdo->prepare("SELECT name FROM tables WHERE id = ?");
+        $stmt->execute([$table_id]);
+        $table = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($table) {
+            $table_number = $table['name']; // Hasilnya cth: "MEJA 1"
+        } else {
+            // Fallback jika ID-nya tidak ada di tabel `tables`
+            $table_number = 'Meja ' . $table_id;
+        }
+    } catch (PDOException $e) {
+         // Fallback jika query database gagal
+        $table_number = 'Meja ' . $table_id;
+        error_log("PDOException in checkout.php (normalisation): " . $e->getMessage());
+    }
+    // Simpan kembali ke sesi agar konsisten
     $_SESSION['table_number'] = $table_number;
 }
 
+// Validasi utama
 if (empty($cart)) {
     $error_message = "Keranjang Anda kosong. Silakan kembali ke menu untuk mulai memesan.";
-} elseif (!$table_number) { // use normalized key for the check
+} elseif (!$table_number) { // Gunakan kunci yang sudah dinormalisasi
     $error_message = "Nomor meja tidak terdeteksi. Silakan kembali ke halaman utama dan scan QR meja terlebih dahulu.";
 }
 
+// Jika tidak ada error, hitung total
 if (!$error_message) {
     try {
-        // hitung total
         $ids = array_keys($cart);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
@@ -35,11 +53,11 @@ if (!$error_message) {
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         foreach($products as $p) {
-            $total += $p['price'] * ($cart[$p['id']] ?? 0); // Handle safety just in case
+            $total += $p['price'] * ($cart[$p['id']] ?? 0);
         }
     } catch (PDOException $e) {
         $error_message = "Terjadi kesalahan database saat menghitung total.";
-        error_log("Database error in checkout.php: " . $e->getMessage());
+        error_log("Database error in checkout.php (total calc): " . $e->getMessage());
     }
 }
 ?>
@@ -81,7 +99,6 @@ if (!$error_message) {
 </head>
 
 <body class="bg-gradient-to-br from-indigo-50 to-orange-50 min-h-screen flex items-center justify-center p-4">
-  <!-- PERUBAHAN: max-w-xl diubah menjadi max-w-md agar lebih kecil dan responsif -->
   <div class="max-w-md w-full mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-2xl">
     
     <!-- Header -->
@@ -98,25 +115,26 @@ if (!$error_message) {
 
     <!-- Konten Error / Checkout -->
     <?php if ($error_message): ?>
+        <!-- Ini adalah blok 'if' -->
         <div class="text-center p-10 border-2 border-dashed border-red-300 rounded-xl bg-red-50">
             <i data-feather="alert-octagon" class="w-12 h-12 text-red-500 mx-auto mb-4"></i>
-            <p class="text-xl text-red-800 font-semibold mb-4"><?= htmlspecialchars($error_message) ?></p>
+            <p class="text-xl text-red-800 font-semibold"><?= htmlspecialchars($error_message) ?></p>
             <a href="menu.php" class="mt-4 inline-block px-6 py-2 bg-indigo-500 text-white font-semibold rounded-full hover:bg-indigo-600 transition shadow-md transform hover:scale-105">
                 Cek Menu
             </a>
         </div>
     <?php else: ?>
+        <!-- Ini adalah blok 'else' -->
         
         <!-- Detail Pemesanan -->
         <div class="mb-6 p-5 bg-indigo-50 rounded-xl shadow-inner border-l-4 border-indigo-500">
             <div class="text-lg font-bold text-gray-800 mb-2 flex justify-between items-center">
                 <span>Nomor Meja:</span>
-                <strong class="text-indigo-900"><?= htmlspecialchars($table_number) ?></strong> <!-- use normalized value -->
+                <strong class="text-indigo-900"><?= htmlspecialchars($table_number) ?></strong>
             </div>
             <div class="h-px bg-gray-200 my-3"></div>
             <div class="font-bold text-gray-800 flex justify-between items-center">
                 <span class="text-xl">Total Pembayaran:</span>
-                <!-- PERUBAHAN: Menambahkan shimmer-text dan membuat font size responsif -->
                 <div class="text-4xl sm:text-xl font-extrabold shimmer-text text-orange-600">
                     <?= currency($total) ?>
                 </div>
@@ -128,7 +146,7 @@ if (!$error_message) {
         <!-- Opsi Pembayaran QRIS -->
         <form action="pay_qris.php" method="post" class="mb-4">
           <input type="hidden" name="action" value="qris">
-          <input type="hidden" name="table_number" value="<?= htmlspecialchars($table_number) ?>"> <!-- pass table_number -->
+          <input type="hidden" name="table_number" value="<?= htmlspecialchars($table_number) ?>">
           <button type="submit" name="pay" value="qris" class="payment-button w-full flex items-center justify-between p-4 bg-blue-600 text-white font-bold rounded-xl shadow-md transition">
             <div class="flex items-center space-x-3">
                 <i data-feather="maximize" class="w-6 h-6"></i>
@@ -141,36 +159,23 @@ if (!$error_message) {
         <!-- Opsi Pembayaran Tunai / Pesan Saja -->
         <form action="tunai.php" method="post">
           <input type="hidden" name="action" value="cash">
-          <input type="hidden" name="table_number" value="<?= htmlspecialchars($table_number) ?>"> <!-- pass table_number -->
+          <input type="hidden" name="table_number" value="<?= htmlspecialchars($table_number) ?>">
+          
+          <!-- ** PERBAIKAN: HTML yang rusak telah diperbaiki di sini ** -->
           <button type="submit" name="pay" value="cash" class="payment-button w-full flex items-center justify-between p-4 bg-green-600 text-white font-bold rounded-xl shadow-md transition">
-            <div class="flex items
-<?php
-// ...existing code...
+            <div class="flex items-center space-x-3">
+                <i data-feather="user" class="w-6 h-6"></i>
+                <span class="text-xl">Bayar di Kasir (Tunai)</span>
+            </div>
+            <i data-feather="chevron-right" class="w-6 h-6"></i>
+          </button>
+        </form>
+    
+    <?php endif; ?>
+    <!-- ** PERBAIKAN: Menutup blok 'if/else' dengan benar ** -->
 
-// ...existing code that saves order and sets $order_id ...
-// e.g. after inserting orders and order_items and you have $order_id available
+  </div>
+  <script>feather.replace();</script>
+</body>
+</html>
 
-// **PATCH: Panggil fungsi notifikasi ke admin via FCM setelah order disimpan**
-if (isset($order_id)) {
-    // Pastikan fungsi tersedia
-    if (function_exists('send_admin_notification')) {
-        // Gunakan nama variabel total yang ada (fallback bila berbeda)
-        $total_for_notification = $total_amount ?? $total ?? 0;
-        // Ambil nomor meja dari variabel lokal atau session (fallback)
-        $table_for_notification = $table_number ?? ($_SESSION['table_number'] ?? null);
-
-        $notification_data = [
-            'order_id' => $order_id,
-            'table_number' => $table_for_notification,
-            'total' => $total_for_notification,
-            'click_action' => '/admin/orders.php?order_id=' . urlencode($order_id)
-        ];
-
-        // Panggil helper
-        send_admin_notification($notification_data, $order_id);
-    } else {
-        error_log('send_admin_notification() not found. Skipping admin notification.');
-    }
-}
-
-// ...existing code (redirect ke success page, dsb)...

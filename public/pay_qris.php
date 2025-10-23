@@ -2,85 +2,125 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../app/helpers.php';
 
-// Cek apakah sesi sudah dimulai
+// Load vendor untuk QR Code
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\PngWriter;
+
+// 1. Mulai sesi
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Ambil metode pembayaran (misalnya ?method=cash atau ?method=qris)
-$payment_method = $_GET['method'] ?? 'qris_mock';
-
-// Ambil cart dan meja dari session
+// 2. Ambil data dari sesi
 $cart = $_SESSION['cart'] ?? [];
 $table_id = $_SESSION['table_id'] ?? null;
+$table_number = $_SESSION['table_number'] ?? null;
+$total_amount = 0; // Ini adalah variabel PHP, namanya boleh apa saja
+$error_message = '';
 
-if (empty($cart) || !$table_id) {
-    die("Sesi tidak valid. <a href='menu.php'>Kembali</a>");
-}
-
-// Ambil produk & hitung total
-try {
-    $ids = array_keys($cart);
-    $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
-    $stmt->execute($ids);
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $total = 0;
-    foreach ($products as $p) {
-        $total += $p['price'] * $cart[$p['id']];
+// 3. **PERBAIKAN: Normalisasi Sesi Meja**
+//    Logika ini disalin dari checkout.php untuk memastikan data meja konsisten
+//    jika sesi hanya memiliki table_id (dari scan QR lama).
+if (!$table_number && $table_id) {
+    try {
+        $stmt = $pdo->prepare("SELECT name FROM tables WHERE id = ?");
+        $stmt->execute([$table_id]);
+        $table = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($table) {
+            $table_number = $table['name']; // Hasilnya cth: "MEJA 1"
+        } else {
+            $table_number = 'Meja ' . $table_id;
+        }
+    } catch (PDOException $e) {
+        $table_number = 'Meja ' . $table_id;
+        error_log("PDOException in pay_qris.php (normalisation): " . $e->getMessage());
     }
-
-    // Buat order baru
-    $order_code = generateOrderCode();
-    $status = ($payment_method === 'cash') ? 'processing' : 'pending';
-    $insert = $pdo->prepare("INSERT INTO orders (order_code, user_id, table_id, total, payment_method, status)
-                             VALUES (?, NULL, ?, ?, ?, ?)");
-    $insert->execute([$order_code, $table_id, $total, $payment_method, $status]);
-    $order_id = $pdo->lastInsertId();
-
-    // Simpan order_items
-    $insertItem = $pdo->prepare("INSERT INTO order_items (order_id, product_id, qty, price) VALUES (?, ?, ?, ?)");
-    foreach ($products as $p) {
-        $qty = $cart[$p['id']];
-        $insertItem->execute([$order_id, $p['id'], $qty, $p['price']]);
-    }
-} catch (PDOException $e) {
-    error_log("Database error in pay_qris.php during order creation: " . $e->getMessage());
-    die("Terjadi kesalahan database saat membuat order.");
+    $_SESSION['table_number'] = $table_number;
 }
 
-
-// Kalau metode tunai, langsung dianggap berhasil
-if ($payment_method === 'cash') {
-    unset($_SESSION['cart']);
-    header("Location: success.php?order=" . urlencode($order_code) . "&msg=" . urlencode("Pembayaran tunai diterima. Silakan tunggu waiter."));
-    exit;
+// 4. Validasi
+if (empty($cart)) {
+    $error_message = "Keranjang Anda kosong.";
+} elseif (!$table_number) {
+    $error_message = "Nomor meja tidak terdeteksi. Silakan scan QR meja.";
 }
 
-// ======================
-// MODE QRIS (Prototype)
-// ======================
-$simulate = $_POST['simulate'] ?? null;
+$product_details = [];
+$order_id = null;
+$qr_code_data_uri = null;
 
-// Path QR statis
-$qr_path = 'assets/qr.jpg';
-if (!file_exists(__DIR__ . '/' . $qr_path)) {
-    // Gunakan placeholder jika file tidak ada
-    $qr_path = 'https://placehold.co/250x250/2563EB/ffffff?text=QR+Code';
-}
+// 5. Proses Order jika valid
+if (!$error_message) {
+    try {
+        // Hitung total dan siapkan detail produk
+        $ids = array_keys($cart);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Jika user klik simulate
-if ($simulate) {
-    if ($simulate === 'success') {
-        $pdo->prepare("UPDATE orders SET status = 'processing' WHERE id = ?")->execute([$order_id]);
+        if (empty($products)) {
+             throw new Exception("Produk di keranjang tidak ditemukan di database.");
+        }
+        
+        foreach($products as $p) {
+            $qty = $cart[$p['id']];
+            $total_amount += $p['price'] * $qty;
+            $product_details[$p['id']] = ['price' => $p['price'], 'qty' => $qty];
+        }
+
+        // Mulai transaksi database
+        $pdo->beginTransaction();
+    
+        // 1. Buat order
+        // **PERBAIKAN ERROR:** Mengganti nama kolom 'total_amount' menjadi 'total' agar cocok dengan schema.sql
+        $stmt = $pdo->prepare("INSERT INTO orders (table_number, total, payment_method, status) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$table_number, $total_amount, 'qris', 'pending']);
+        $order_id = $pdo->lastInsertId();
+    
+        // 2. Masukkan order items
+        $stmt_items = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
+        foreach($product_details as $product_id => $details) {
+            $stmt_items->execute([$order_id, $product_id, $details['qty'], $details['price']]);
+        }
+    
+        $pdo->commit();
+
+        // 3. Buat QR Code (Simulasi)
+        // Di aplikasi nyata, Anda akan memanggil payment gateway API
+        // dan mendapatkan string QRIS dari mereka.
+        // Di sini kita buat QR code palsu yang berisi detail order.
+        $qris_string = "QRIS_PALSU:ORDER_ID_{$order_id}:TOTAL_RP_{$total_amount}";
+        
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->writerOptions([])
+            ->data($qris_string)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(300)
+            ->margin(10)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->build();
+
+        $qr_code_data_uri = $result->getDataUri();
+
+        // 4. Kosongkan keranjang setelah order berhasil
         unset($_SESSION['cart']);
-        header('Location: success.php?order=' . urlencode($order_code));
-        exit;
-    } elseif ($simulate === 'cancel') {
-        $pdo->prepare("UPDATE orders SET status = 'cancelled', updated_at = NOW() WHERE id = ?")->execute([$order_id]);
-        header('Location: menu.php?msg=' . urlencode('Pembayaran dibatalkan.'));
-        exit;
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        // **PERBAIKAN: Tampilkan error database yang sebenarnya**
+        $error_message = "Terjadi kesalahan database saat membuat order: " . $e->getMessage();
+        error_log("Database error in pay_qris.php: " . $e->getMessage());
+    } catch (Exception $e) {
+        // Menangkap error lainnya (spt produk tidak ditemukan)
+        $error_message = $e->getMessage();
     }
 }
 ?>
@@ -88,75 +128,66 @@ if ($simulate) {
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <title>Pembayaran QRIS (Prototype)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bayar dengan QRIS - RestoKu</title>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
-    /* Tambahkan font Inter */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-    body {
-        font-family: 'Inter', sans-serif;
-    }
+    body { font-family: 'Inter', sans-serif; }
   </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-50 to-orange-50 min-h-screen flex items-center justify-center p-4 sm:p-6">
-  <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-8 text-center">
+<body class="bg-gradient-to-br from-indigo-50 to-orange-50 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-2xl text-center">
     
-    <div class="mb-6 flex justify-center">
-        <i data-feather="qr-code" class="w-10 h-10 text-indigo-600"></i>
-    </div>
-    
-    <h1 class="text-3xl font-extrabold text-indigo-700 mb-2">Pembayaran QRIS</h1>
-    <p class="text-sm text-gray-500 mb-6">
-      Scan QR berikut menggunakan aplikasi pembayaran kamu, atau gunakan tombol simulasi.
-    </p>
-
-    <!-- QR Code Section -->
-    <div class="mb-6 p-4 bg-gray-100 rounded-xl inline-block shadow-inner">
-      <img src="<?= htmlspecialchars($qr_path) ?>" alt="QRIS Prototype" class="rounded-lg shadow-md transition duration-300 hover:scale-105" width="250">
-    </div>
-    
-    <!-- Total Pembayaran yang Menonjol -->
-    <div class="mb-6 p-4 bg-orange-50 border-l-4 border-orange-500 rounded-xl shadow-md">
-        <div class="flex justify-between items-center">
-            <p class="text-lg font-semibold text-gray-700">Total Pembayaran:</p>
-            <p class="text-xl font-extrabold text-indigo-700"><?= currency($total) ?></p>
+    <?php if ($error_message): ?>
+        <!-- Tampilan Error -->
+        <div class="text-center p-10 border-2 border-dashed border-red-300 rounded-xl bg-red-50">
+            <i data-feather="alert-octagon" class="w-12 h-12 text-red-500 mx-auto mb-4"></i>
+            <h1 class="text-xl text-red-800 font-semibold mb-2">Order Gagal Dibuat</h1>
+            <p class="text-sm text-gray-700 mb-4"><?= htmlspecialchars($error_message) ?></p>
+            <a href="checkout.php" class="mt-4 inline-block px-6 py-2 bg-indigo-500 text-white font-semibold rounded-full hover:bg-indigo-600 transition shadow-md">
+                Kembali ke Checkout
+            </a>
         </div>
-    </div>
+    <?php else: ?>
+        <!-- Tampilan Sukses (QRIS) -->
+        <i data-feather="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2">
+          Order Diterima!
+        </h1>
+        <p class="text-gray-600 mb-6">Silakan scan QR Code di bawah ini untuk menyelesaikan pembayaran.</p>
 
+        <div class="mb-6 p-5 bg-indigo-50 rounded-xl shadow-inner border-l-4 border-indigo-500 text-left">
+            <div class="text-lg font-bold text-gray-800 mb-2 flex justify-between items-center">
+                <span>Nomor Meja:</span>
+                <strong class="text-indigo-900"><?= htmlspecialchars($table_number) ?></strong>
+            </div>
+            <div class="font-bold text-gray-800 flex justify-between items-center">
+                <span class="text-xl">Total Bayar:</span>
+                <div class="text-4xl font-extrabold text-orange-600">
+                    <?= currency($total_amount) ?>
+                </div>
+            </div>
+        </div>
 
-    <!-- Detail Order -->
-    <div class="text-left space-y-2 mb-6 p-4 bg-indigo-50 rounded-xl">
-      <p class="text-sm text-indigo-800">Kode Order: <strong class="font-bold"><?= htmlspecialchars($order_code) ?></strong></p>
-      <p class="text-sm text-indigo-800">Nomor Meja: <strong class="font-bold"><?= htmlspecialchars($table_id) ?></strong></p>
-      <p class="text-sm text-indigo-800">Status: <strong class="text-yellow-600 font-bold">Pending</strong></p>
-    </div>
-    
-    <!-- Tombol Simulasi -->
-    <div class="flex flex-col sm:flex-row gap-3 justify-center">
-      <form method="post" class="w-full sm:w-auto">
-        <input type="hidden" name="simulate" value="success">
-        <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-700 transition transform hover:scale-[1.02]">
-          Simulate Paid ✅
-        </button>
-      </form>
+        <!-- Tampilkan QR Code -->
+        <div class="flex justify-center mb-6">
+            <img src="<?= $qr_code_data_uri ?>" alt="QR Code Pembayaran" class="border-4 border-gray-300 rounded-lg shadow-md">
+        </div>
 
-      <form method="post" class="w-full sm:w-auto">
-        <input type="hidden" name="simulate" value="cancel">
-        <button type="submit" class="w-full px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 transition transform hover:scale-[1.02]">
-          Simulate Cancel ✖️
-        </button>
-      </form>
-    </div>
+        <p class="text-sm text-gray-500 mb-6">
+          Setelah membayar, pesanan Anda akan otomatis diproses oleh dapur.
+        </p>
 
-    <div class="mt-6 text-sm">
-      <a href="menu.php" class="text-indigo-600 hover:text-indigo-800 transition font-medium flex items-center justify-center">
-        <i data-feather="arrow-left" class="w-4 h-4 mr-1"></i>
-        Kembali ke Menu
-      </a>
-    </div>
+        <a href="order_status.php?order_id=<?= $order_id ?>" class="w-full inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg">
+          Cek Status Pesanan Saya
+        </a>
+    <?php endif; ?>
+
   </div>
-<script>feather.replace();</script>
+  <script>feather.replace();</script>
 </body>
 </html>
+
