@@ -171,3 +171,77 @@ function dd($data) {
     echo '</pre>';
     die();
 }
+
+/**
+ * Mengirim notifikasi Push Notification ke Admin via FCM.
+ * @param array $data Data payload notifikasi.
+ * @param string $orderId ID Pesanan untuk konten notifikasi.
+ */
+function send_admin_notification($data, $orderId) {
+    // Ganti dengan Kunci Server FCM Anda
+    $fcm_server_key = 'YOUR_FIREBASE_SERVER_KEY_HERE';
+
+    if (empty($fcm_server_key) || $fcm_server_key === 'YOUR_FIREBASE_SERVER_KEY_HERE') {
+        error_log('FCM Server Key is not configured. Notification skipped.');
+        return;
+    }
+
+    // Gunakan koneksi DB global jika tersedia
+    global $pdo;
+    if (!isset($pdo) || !$pdo) {
+        error_log('PDO connection not available. Notification skipped.');
+        return;
+    }
+
+    // Ambil semua token admin dari database
+    // Sesuaikan nama tabel/kolom jika struktur DB Anda berbeda.
+    try {
+        $stmt = $pdo->query("SELECT fcm_token FROM admin_tokens WHERE fcm_token IS NOT NULL AND fcm_token <> ''");
+        $tokens = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Exception $e) {
+        error_log('Failed to fetch admin tokens: ' . $e->getMessage());
+        return;
+    }
+
+    if (empty($tokens)) {
+        error_log('No FCM tokens registered for admin.');
+        return;
+    }
+
+    $url = 'https://fcm.googleapis.com/fcm/send';
+
+    $notification = [
+        'title' => 'PESANAN BARU! 🔔',
+        'body'  => isset($data['table_number']) ? "Pesanan #{$orderId} dari Meja: {$data['table_number']} telah dibuat." : "Pesanan #{$orderId} telah dibuat.",
+        'icon'  => '/assets/logo.png'
+    ];
+
+    $fields = [
+        'registration_ids' => $tokens,
+        'notification' => $notification,
+        'data' => $data,
+        'priority' => 'high'
+    ];
+
+    $headers = [
+        'Authorization: key=' . $fcm_server_key,
+        'Content-Type: application/json'
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+
+    $result = curl_exec($ch);
+    if (curl_errno($ch)) {
+        error_log('cURL Error (FCM): ' . curl_error($ch));
+    } else {
+        // Opsional: log hasil respon FCM untuk debugging
+        error_log('FCM response: ' . $result);
+    }
+    curl_close($ch);
+}

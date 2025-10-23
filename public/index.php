@@ -2,6 +2,29 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../app/helpers.php';
 
+// Pastikan session aktif (config.php mungkin sudah memanggil session_start())
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// **PATCH: Simpan Nomor Meja dari Parameter URL ke Sesi**
+if (isset($_GET['table_number'])) {
+    // Bersihkan input untuk keamanan
+    $_SESSION['table_number'] = htmlspecialchars($_GET['table_number'], ENT_QUOTES, 'UTF-8');
+    // Alihkan ke menu agar URL terlihat bersih (opsional)
+    header('Location: menu.php');
+    exit;
+}
+
+// Jika belum ada sesi meja, paksa ke halaman awal untuk scan (opsional)
+// Kecuali jika ini adalah halaman index.php itu sendiri atau halaman login/admin.
+// Untuk tujuan demo, baris pengalihan berikut dikomentari. Aktifkan bila diperlukan.
+// $uri = $_SERVER['REQUEST_URI'] ?? '';
+// if (!isset($_SESSION['table_number']) && !str_contains($uri, 'index.php')) {
+//     header('Location: index.php');
+//     exit;
+//}
+
 // Cek apakah sesi sudah dimulai
 if (session_status() == PHP_SESSION_NONE) {
     session_start();

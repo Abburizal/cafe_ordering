@@ -7,6 +7,16 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
+// Pastikan nomor meja ada di sesi (kunci 'table_number')
+if (!isset($_SESSION['table_number'])) {
+    // Pengamanan: Jika langsung akses menu tanpa scan QR
+    header('Location: index.php?error=no_table');
+    exit;
+}
+
+// Dukungan fallback jika sebelumnya menggunakan 'table_id'
+$table_id = $_SESSION['table_number'] ?? $_SESSION['table_id'] ?? null;
+
 try {
     // Asumsi $pdo sudah tersedia dari config.php
     // Ambil semua produk

@@ -71,9 +71,50 @@ if (isset($_POST['update_status'])) {
         $message = "⚠️ Status tidak valid!";
     } else {
         try {
+            // Ambil data pesanan sebelum update (untuk notifikasi)
+            $stmt_before = $pdo->prepare("SELECT o.order_code, o.table_id, o.status AS old_status, o.total, o.payment_method, t.name AS table_name 
+                                          FROM orders o 
+                                          LEFT JOIN tables t ON o.table_id = t.id
+                                          WHERE o.id = ?");
+            $stmt_before->execute([$id]);
+            $order_before = $stmt_before->fetch(PDO::FETCH_ASSOC);
+
+            // Lakukan update status
             $stmt = $pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([$status, $id]);
+
             $message = "✅ Status pesanan #$id berhasil diubah menjadi <b>$status</b>!";
+
+            // Siapkan payload notifikasi
+            $notification_payload = [
+                'order_id' => $id,
+                'order_code' => $order_before['order_code'] ?? null,
+                'table_id' => $order_before['table_id'] ?? null,
+                'table_name' => $order_before['table_name'] ?? null,
+                'old_status' => $order_before['old_status'] ?? null,
+                'new_status' => $status,
+                'total' => $order_before['total'] ?? null,
+                'payment_method' => $order_before['payment_method'] ?? null,
+                'event' => 'status_updated',
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Kirim notifikasi ke admin (pakai helper jika ada)
+            if (function_exists('send_admin_notification')) {
+                try {
+                    // Implementasi helper di luar file ini diharapkan menerima (payload, optionally target_id)
+                    send_admin_notification($notification_payload, $id);
+                } catch (Exception $ex) {
+                    error_log("send_admin_notification failed: " . $ex->getMessage());
+                }
+            } else {
+                // Fallback: log dan simpan di session untuk debugging ringan
+                error_log("Admin notification (fallback): " . json_encode($notification_payload));
+                if (session_status() === PHP_SESSION_NONE) {
+                    @session_start();
+                }
+                $_SESSION['last_admin_notification'] = $notification_payload;
+            }
         } catch (PDOException $e) {
              error_log("Error updating status: " . $e->getMessage());
              $message = "❌ Gagal memperbarui status!";

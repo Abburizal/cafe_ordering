@@ -9,12 +9,19 @@ if (session_status() == PHP_SESSION_NONE) {
 
 $cart = $_SESSION['cart'] ?? [];
 $table_id = $_SESSION['table_id'] ?? null;
+$table_number = $_SESSION['table_number'] ?? null; // **NEW** read normalized key
 $total = 0;
 $error_message = '';
 
+// If only table_id exists, normalise to table_number so downstream code uses $_SESSION['table_number']
+if (!$table_number && $table_id) {
+    $table_number = $table_id;
+    $_SESSION['table_number'] = $table_number;
+}
+
 if (empty($cart)) {
     $error_message = "Keranjang Anda kosong. Silakan kembali ke menu untuk mulai memesan.";
-} elseif (!$table_id) {
+} elseif (!$table_number) { // use normalized key for the check
     $error_message = "Nomor meja tidak terdeteksi. Silakan kembali ke halaman utama dan scan QR meja terlebih dahulu.";
 }
 
@@ -104,7 +111,7 @@ if (!$error_message) {
         <div class="mb-6 p-5 bg-indigo-50 rounded-xl shadow-inner border-l-4 border-indigo-500">
             <div class="text-lg font-bold text-gray-800 mb-2 flex justify-between items-center">
                 <span>Nomor Meja:</span>
-                <strong class="text-indigo-900"><?= htmlspecialchars($table_id) ?></strong>
+                <strong class="text-indigo-900"><?= htmlspecialchars($table_number) ?></strong> <!-- use normalized value -->
             </div>
             <div class="h-px bg-gray-200 my-3"></div>
             <div class="font-bold text-gray-800 flex justify-between items-center">
@@ -121,6 +128,7 @@ if (!$error_message) {
         <!-- Opsi Pembayaran QRIS -->
         <form action="pay_qris.php" method="post" class="mb-4">
           <input type="hidden" name="action" value="qris">
+          <input type="hidden" name="table_number" value="<?= htmlspecialchars($table_number) ?>"> <!-- pass table_number -->
           <button type="submit" name="pay" value="qris" class="payment-button w-full flex items-center justify-between p-4 bg-blue-600 text-white font-bold rounded-xl shadow-md transition">
             <div class="flex items-center space-x-3">
                 <i data-feather="maximize" class="w-6 h-6"></i>
@@ -133,21 +141,36 @@ if (!$error_message) {
         <!-- Opsi Pembayaran Tunai / Pesan Saja -->
         <form action="tunai.php" method="post">
           <input type="hidden" name="action" value="cash">
+          <input type="hidden" name="table_number" value="<?= htmlspecialchars($table_number) ?>"> <!-- pass table_number -->
           <button type="submit" name="pay" value="cash" class="payment-button w-full flex items-center justify-between p-4 bg-green-600 text-white font-bold rounded-xl shadow-md transition">
-            <div class="flex items-center space-x-3">
-                <i data-feather="dollar-sign" class="w-6 h-6"></i>
-                <span class="text-xl">Bayar Tunai</span>
-            </div>
-            <span class="text-sm opacity-80">(Pesan dulu, Bayar di Meja)</span>
-          </button>
-        </form>
-        
-        <p class="mt-6 text-sm text-center text-gray-500">
-            Pesanan Anda akan segera diproses setelah pembayaran dikonfirmasi.
-        </p>
+            <div class="flex items
+<?php
+// ...existing code...
 
-    <?php endif; ?>
-  </div>
-<script>feather.replace();</script>
-</body>
-</html>
+// ...existing code that saves order and sets $order_id ...
+// e.g. after inserting orders and order_items and you have $order_id available
+
+// **PATCH: Panggil fungsi notifikasi ke admin via FCM setelah order disimpan**
+if (isset($order_id)) {
+    // Pastikan fungsi tersedia
+    if (function_exists('send_admin_notification')) {
+        // Gunakan nama variabel total yang ada (fallback bila berbeda)
+        $total_for_notification = $total_amount ?? $total ?? 0;
+        // Ambil nomor meja dari variabel lokal atau session (fallback)
+        $table_for_notification = $table_number ?? ($_SESSION['table_number'] ?? null);
+
+        $notification_data = [
+            'order_id' => $order_id,
+            'table_number' => $table_for_notification,
+            'total' => $total_for_notification,
+            'click_action' => '/admin/orders.php?order_id=' . urlencode($order_id)
+        ];
+
+        // Panggil helper
+        send_admin_notification($notification_data, $order_id);
+    } else {
+        error_log('send_admin_notification() not found. Skipping admin notification.');
+    }
+}
+
+// ...existing code (redirect ke success page, dsb)...
