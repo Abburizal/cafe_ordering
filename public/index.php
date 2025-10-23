@@ -2,76 +2,101 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../app/helpers.php';
 
-// Pastikan session aktif (config.php mungkin sudah memanggil session_start())
+// 1. Pastikan session aktif (config.php mungkin sudah memanggil session_start())
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// **PATCH: Simpan Nomor Meja dari Parameter URL ke Sesi**
-if (isset($_GET['table_number'])) {
-    // Bersihkan input untuk keamanan
-    $_SESSION['table_number'] = htmlspecialchars($_GET['table_number'], ENT_QUOTES, 'UTF-8');
-    // Alihkan ke menu agar URL terlihat bersih (opsional)
-    header('Location: menu.php');
-    exit;
-}
+// 2. Inisialisasi variabel error
+$error_message = '';
 
-// Jika belum ada sesi meja, paksa ke halaman awal untuk scan (opsional)
-// Kecuali jika ini adalah halaman index.php itu sendiri atau halaman login/admin.
-// Untuk tujuan demo, baris pengalihan berikut dikomentari. Aktifkan bila diperlukan.
-// $uri = $_SERVER['REQUEST_URI'] ?? '';
-// if (!isset($_SESSION['table_number']) && !str_contains($uri, 'index.php')) {
-//     header('Location: index.php');
-//     exit;
-//}
+// 3. Penanganan Input Meja (Standarisasi Sesi)
+//    Semua metode (QR, link, tes) sekarang akan mengambil data dari DB
+//    dan mengatur 'table_id' (ID numerik) dan 'table_number' (Nama string)
+try {
+    // Opsi 1: Dipindai dari QR Code (cth: index.php?code=TBL-001)
+    if (isset($_GET['code'])) {
+        $code = $_GET['code'];
+        $stmt = $pdo->prepare("SELECT id, name FROM tables WHERE code = ?");
+        $stmt->execute([$code]);
+        $table = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Cek apakah sesi sudah dimulai
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Jika user scan QR dengan code meja, misal index.php?code=TBL001
-if (isset($_GET['code'])) {
-    $code = $_GET['code'];
-
-    // Cari ID meja berdasarkan kode unik
-    $stmt = $pdo->prepare("SELECT id FROM tables WHERE code = ?");
-    $stmt->execute([$code]);
-    $table = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($table) {
-        // Asumsi session sudah dimulai di config.php
-        $_SESSION['table_id'] = $table['id'];
-        header('Location: menu.php');
-        exit;
-    } else {
-        die("Kode meja tidak valid. Silakan hubungi pelayan.");
+        if ($table) {
+            $_SESSION['table_id'] = (int)$table['id'];
+            $_SESSION['table_number'] = $table['name']; // Cth: "MEJA 1"
+            header('Location: menu.php');
+            exit;
+        } else {
+            $error_message = "Kode meja tidak valid. Silakan scan ulang atau pilih meja dari daftar.";
+        }
     }
+
+    // Opsi 2: Simulasi/Testing via ID (cth: index.php?table=1)
+    if (isset($_GET['table'])) {
+        $table_id = (int)$_GET['table'];
+        $stmt = $pdo->prepare("SELECT id, name FROM tables WHERE id = ?");
+        $stmt->execute([$table_id]);
+        $table = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($table) {
+            $_SESSION['table_id'] = (int)$table['id'];
+            $_SESSION['table_number'] = $table['name'];
+            header('Location: menu.php');
+            exit;
+        } else {
+            $error_message = "Meja dengan ID '$table_id' tidak ditemukan.";
+        }
+    }
+    
+    // Opsi 3: Patch lama via Nama (cth: index.php?table_number=MEJA 1)
+    if (isset($_GET['table_number'])) {
+        $table_name = htmlspecialchars($_GET['table_number'], ENT_QUOTES, 'UTF-8');
+        $stmt = $pdo->prepare("SELECT id, name FROM tables WHERE name = ?");
+        $stmt->execute([$table_name]);
+        $table = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($table) {
+            $_SESSION['table_id'] = (int)$table['id'];
+            $_SESSION['table_number'] = $table['name'];
+            header('Location: menu.php');
+            exit;
+        } else {
+             $error_message = "Meja dengan nama '$table_name' tidak ditemukan.";
+        }
+    }
+
+} catch (PDOException $e) {
+    $error_message = "Kesalahan database. Tidak dapat memverifikasi meja.";
+    error_log("PDOException in index.php (Handling GET): " . $e->getMessage());
 }
 
-// Simulasi manual (untuk testing tanpa QR)
-if (isset($_GET['table'])) {
-    // Asumsi session sudah dimulai di config.php
-    $_SESSION['table_id'] = (int)$_GET['table'];
-    header('Location: menu.php');
-    exit;
-}
+// 4. Pengambilan Data Meja (Dinamis dari DB)
+//    Ini menggantikan array $tables yang di-hardcode
+$tables = [];
+$colors = ['orange', 'teal', 'purple', 'red', 'blue', 'green', 'pink', 'indigo', 'yellow', 'cyan', 'fuchsia'];
 
-// Data simulasi meja untuk looping di HTML (Diperbarui menjadi 11 meja)
-$tables = [
-    ['code' => 'TBL-001', 'display' => 'MEJA 1', 'color' => 'orange'],
-    ['code' => 'TBL-002', 'display' => 'MEJA 2', 'color' => 'teal'],
-    ['code' => 'TBL-003', 'display' => 'MEJA 3', 'color' => 'purple'],
-    ['code' => 'TBL-004', 'display' => 'MEJA 4', 'color' => 'red'],
-    // --- Penambahan 7 Meja Baru ---
-    ['code' => 'TBL-005', 'display' => 'MEJA 5', 'color' => 'blue'],
-    ['code' => 'TBL-006', 'display' => 'MEJA 6', 'color' => 'green'],
-    ['code' => 'TBL-007', 'display' => 'MEJA 7', 'color' => 'pink'],
-    ['code' => 'TBL-008', 'display' => 'MEJA 8', 'color' => 'indigo'],
-    ['code' => 'TBL-009', 'display' => 'MEJA 9', 'color' => 'yellow'],
-    ['code' => 'TBL-010', 'display' => 'MEJA 10', 'color' => 'cyan'],
-    ['code' => 'TBL-011', 'display' => 'MEJA 11', 'color' => 'fuchsia'],
-];
+try {
+    // Asumsi tabel 'tables' memiliki kolom 'id', 'code', dan 'name' (untuk tampilan "MEJA 1")
+    $stmt = $pdo->query("SELECT id, code, name FROM tables ORDER BY id ASC");
+    $db_tables = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($db_tables as $index => $table) {
+        $tables[] = [
+            'code' => $table['code'],
+            'display' => $table['name'], // 'name' dari DB digunakan sebagai 'display'
+            'color' => $colors[$index % count($colors)] // Terapkan warna secara berurutan
+        ];
+    }
+
+    if (empty($tables) && empty($error_message)) {
+        // Hanya tampilkan error ini jika tidak ada error lain
+        $error_message = "Tidak ada meja yang terdaftar di sistem.";
+    }
+
+} catch (PDOException $e) {
+    $error_message = "Gagal memuat daftar meja dari database.";
+    error_log("PDOException in index.php (Fetching tables): " . $e->getMessage());
+}
 ?>
 <!doctype html>
 <html lang="id">
@@ -87,44 +112,37 @@ $tables = [
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            /* Hapus background dari body agar konten bergulir di atas latar belakang tetap */
             background-color: transparent; 
         }
-        /* Kelas animasi untuk kartu */
         .animated-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             cursor: pointer;
         }
         .animated-card:hover {
-            transform: translateY(-5px) scale(1.03); /* Sedikit naik dan skala saat hover */
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* Bayangan lebih besar */
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        /* Kelas animasi untuk gambar di dalam kartu */
         .card-image {
             transition: transform 0.5s ease;
         }
         .animated-card:hover .card-image {
-            transform: scale(1.1) rotate(-3deg); /* Efek zoom dan putar sedikit */
+            transform: scale(1.1) rotate(-3deg);
         }
-        /* Efek Glassmorphism untuk Navbar mengambang */
         .floating-navbar {
-            background-color: rgba(255, 255, 255, 0.95); /* Semi-transparan agar lebih jelas */
-            backdrop-filter: blur(8px); /* Efek blur/glass */
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
         }
-        /* Latar Belakang Tetap untuk Efek Parallax */
         .fixed-bg {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; /* Pindahkan ke belakang konten utama */
-            /* Menggunakan gradient besar untuk ilusi kedalaman */
+            z-index: -1;
             background: linear-gradient(135deg, #e0f2fe, #f0e6ff, #fef2f4); 
-            animation: subtle-shift 60s infinite alternate; /* Animasi pergeseran halus */
+            animation: subtle-shift 60s infinite alternate;
         }
-
         @keyframes subtle-shift {
             0% { background-position: 0% 0%; }
             100% { background-position: 100% 100%; }
@@ -153,6 +171,16 @@ $tables = [
 </nav>
 
 <main class="flex-1 flex flex-col items-center p-4 pb-8 relative z-10"> 
+
+    <?php if (!empty($error_message)): ?>
+    <div class="w-full max-w-lg mx-auto p-4 mb-6 text-center bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-lg" role="alert">
+        <div class="flex items-center justify-center">
+            <i data-feather="alert-triangle" class="w-6 h-6 mr-2"></i>
+            <span class="font-semibold"><?= htmlspecialchars($error_message) ?></span>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="text-center mb-10 pt-10">
         <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">
             <i data-feather="grid" class="inline-block w-8 h-8 mr-2 text-indigo-500"></i>
@@ -167,7 +195,7 @@ $tables = [
 
         <?php foreach ($tables as $table) : ?>
         <div class="flex-shrink-0 m-4 relative overflow-hidden bg-<?= $table['color'] ?>-500 rounded-2xl max-w-xs shadow-lg animated-card w-full sm:w-64">
-            <a href="index.php?code=<?= $table['code'] ?>" class="block h-full">
+            <a href="index.php?code=<?= htmlspecialchars($table['code']) ?>" class="block h-full">
                 <svg class="absolute bottom-0 left-0 mb-8" viewBox="0 0 375 283" fill="none"
                     style="transform: scale(1.5); opacity: 0.1;">
                     <rect x="159.52" y="175" width="152" height="152" rx="8" transform="rotate(-45 159.52 175)" fill="white" />
@@ -183,7 +211,7 @@ $tables = [
                     <div class="flex justify-between items-end">
                         <span class="block font-bold text-2xl">Menu Untuk</span>
                         <span class="block bg-white rounded-full text-<?= $table['color'] ?>-600 text-sm font-extrabold px-4 py-2 leading-none flex items-center shadow-lg border-2 border-white">
-                            <?= $table['display'] ?>
+                            <?= htmlspecialchars($table['display']) ?>
                         </span>
                     </div>
                 </div>
@@ -200,11 +228,9 @@ $tables = [
 <script>
     feather.replace();
     
-    // Fungsi sederhana untuk mengganti alert menjadi custom modal/message box jika diperlukan
+    // Fungsi alert kustom Anda (tidak diubah)
     window.alert = function(message) {
         console.log("ALERT BLOCKED: ", message);
-        // Di lingkungan nyata, Anda akan menampilkan modal kustom di sini.
-        // Untuk demo ini, kita hanya akan mencetak ke konsol.
         const nav = document.querySelector('.floating-navbar');
         const msgBox = document.createElement('div');
         msgBox.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-xl shadow-2xl z-50 border border-gray-200 text-gray-800 text-center transition-all duration-300 scale-100 opacity-100';

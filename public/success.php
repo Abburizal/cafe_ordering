@@ -95,11 +95,44 @@ $payment_name = ($order['payment_method'] === 'cash') ? 'Tunai (Cash)' : 'QRIS';
 
 
     <!-- Tombol Kembali -->
-    <a href="menu.php" class="inline-flex items-center space-x-2 px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:scale-105 text-xl">
-        <i data-feather="coffee" class="w-6 h-6"></i>
-        <span>Pesan Lagi</span>
-    </a>
+    <div class="space-y-3">
+      <a href="menu.php" class="inline-flex items-center space-x-2 px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:scale-105 text-xl">
+          <i data-feather="coffee" class="w-6 h-6"></i>
+          <span>Pesan Lagi</span>
+      </a>
+
+      <!-- Tambahkan tombol Lihat Riwayat -->
+      <a href="riwayat.php" class="inline-flex items-center space-x-2 px-6 py-2 border border-indigo-200 text-indigo-700 rounded-full hover:bg-indigo-50 transition text-sm">
+          <i data-feather="list" class="w-4 h-4"></i>
+          <span>Lihat Riwayat Pesanan</span>
+      </a>
+    </div>
+
   </div>
-<script>feather.replace();</script>
+
+<script>
+feather.replace();
+</script>
+
+<!-- Simpan order id ke localStorage agar pelanggan dapat melihat riwayat tanpa login -->
+<script>
+(function(){
+    try {
+        var orderId = <?= json_encode($order['id'] ?? null) ?>;
+        if (orderId) {
+            var key = 'riwayat_pesanan_cafe';
+            var riwayat = JSON.parse(localStorage.getItem(key)) || [];
+            // pastikan hanya menyimpan sekali
+            if (riwayat.indexOf(orderId) === -1) {
+                riwayat.push(orderId);
+                localStorage.setItem(key, JSON.stringify(riwayat));
+            }
+        }
+    } catch (e) {
+        console.error('Gagal menyimpan riwayat pesanan:', e);
+    }
+})();
+</script>
+
 </body>
 </html>

@@ -216,8 +216,9 @@ $adminName = e($_SESSION['username']);
 <body class="bg-stone-100 min-h-screen">
 
   <!-- 2. AUDIO ELEMENT untuk Notifikasi Suara -->
-  <audio id="notificationSound" preload="auto">
-      <!-- Menggunakan Base64 data URI untuk suara 'Beep' sederhana -->
+  <!-- changed: tambahkan atribut src sebagai fallback ke file MP3 eksternal -->
+  <audio id="notificationSound" src="path/to/notification.mp3" preload="auto">
+      <!-- Menggunakan Base64 data URI untuk suara 'Beep' sederhana sebagai fallback -->
       <source src="data:audio/mp3;base64,SUQzBAAAAAAAAgEVAAAEVFRTUzAAAABJdmV0b3I6IExhdmYgNjMuMC4xMDAgU2VyaWVzIHRvb2xzIGZvciBMSlAtTVAzIFByb2plY3QgKENPUEVSQUQgQ1JFQVRJWkpPV04gU09MVVRJT04p" type="audio/mp3">
   </audio>
 
@@ -646,6 +647,45 @@ $adminName = e($_SESSION['username']);
         open = !open;
         dropdown.classList.toggle('hidden', !open);
     });
+  </script>
+
+  <!-- added: simple polling script untuk cek pesanan baru setiap 15 detik -->
+  <script>
+    let currentPendingOrders = 0; // Inisialisasi
+
+    async function cekPesananBaru() {
+        try {
+            const res = await fetch('api/cek_pesanan_baru.php', { method: 'GET', headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+
+            if (typeof data.new_orders !== 'undefined') {
+                if (data.new_orders > 0 && data.new_orders > currentPendingOrders) {
+                    // Ada pesanan baru!
+                    const audio = document.getElementById('notificationSound');
+                    if (audio) {
+                        audio.play().catch(err => console.error('Gagal memutar suara notifikasi:', err));
+                    }
+                    alert('Ada pesanan baru!');
+                    // Auto-refresh halaman untuk menampilkan data baru
+                    location.reload();
+                }
+                currentPendingOrders = data.new_orders; // Update jumlah
+            } else {
+                console.warn('Response api/cek_pesanan_baru.php tidak mengandung field new_orders', data);
+            }
+        } catch (err) {
+            console.error('Error saat cekPesananBaru:', err);
+        } finally {
+            setTimeout(cekPesananBaru, 15000); // Polling setiap 15 detik
+        }
+    }
+
+    // Mulai polling setelah DOM siap
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => cekPesananBaru());
+    } else {
+        cekPesananBaru();
+    }
   </script>
 </body>
 </html>

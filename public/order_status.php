@@ -45,7 +45,7 @@ $current_status = $status_map[$order['status']] ?? $order['status'];
             <?php if ($order['status'] == 'pending') echo 'bg-yellow-100 border-l-4 border-yellow-500'; ?>
         ">
             <h2 class="text-xl font-bold">Status Saat Ini:</h2>
-            <p class="text-2xl font-extrabold mt-2"><?= $current_status ?></p>
+            <p id="status-pesanan" data-status="<?= htmlspecialchars($order['status']) ?>" class="text-2xl font-extrabold mt-2"><?= $current_status ?></p>
             <?php if ($order['status'] == 'ready'): ?>
                 <p class="mt-2 text-green-700">Silakan ambil pesanan Anda di konter/kasir. Terima kasih!</p>
             <?php endif; ?>
@@ -53,5 +53,46 @@ $current_status = $status_map[$order['status']] ?? $order['status'];
         
         <a href="menu.php" class="mt-4 inline-block text-blue-500 hover:text-blue-700">← Kembali ke Menu</a>
     </div>
+
+    <script>
+        const orderId = <?php echo json_encode($order_id); ?>;
+        const statusElement = document.getElementById('status-pesanan');
+
+        // mapping status mentah ke teks bahasa Indonesia (sama seperti di PHP)
+        const statusMap = {
+            'pending': 'Menunggu Pembayaran',
+            'processing': 'Sedang Diproses',
+            'ready': 'Siap Diambil (Selesai)',
+            'cancelled': 'Dibatalkan'
+        };
+
+        function cekStatus() {
+            fetch(`api/get_status.php?order_id=${orderId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.status) return;
+                    const remoteStatus = data.status;
+                    const currentRaw = statusElement.dataset.status || '';
+
+                    if (remoteStatus && remoteStatus !== currentRaw) {
+                        // update atribut raw dan teks yang terlihat
+                        statusElement.dataset.status = remoteStatus;
+                        statusElement.textContent = statusMap[remoteStatus] || remoteStatus;
+                        // efek visual singkat
+                        statusElement.classList.add('bg-yellow-200');
+                        setTimeout(() => statusElement.classList.remove('bg-yellow-200'), 1000);
+                    }
+
+                    // lanjut polling jika belum selesai (anggap 'ready' atau 'cancelled' = selesai)
+                    if (remoteStatus !== 'ready' && remoteStatus !== 'cancelled') {
+                        setTimeout(cekStatus, 5000);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        // mulai polling setelah halaman dimuat
+        setTimeout(cekStatus, 5000);
+    </script>
 </body>
 </html>
