@@ -69,6 +69,7 @@ feather.replace();
     data.orders.forEach(order => {
       const div = document.createElement('div');
       div.className = 'p-4 border rounded-lg bg-gray-50';
+      
       div.innerHTML = `
         <div class="flex justify-between items-center mb-2">
           <div>

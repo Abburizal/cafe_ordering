@@ -19,6 +19,9 @@ try {
 }
 
 // Midtrans (sandbox)
+// ... (isi file config.php) ...
 define('MIDTRANS_SERVER_KEY', 'YOUR_MIDTRANS_SERVER_KEY');
 define('MIDTRANS_IS_PRODUCTION', false); 
-define('BASE_URL', 'http://localhost/cafe-ordering/public');
+define('BASE_URL', 'http://localhost/cafe_ordering/public');
+
+// Hapus '}' ekstra di akhir file

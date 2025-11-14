@@ -108,8 +108,9 @@ $table_display = $_SESSION['table_number'] ?? ($_SESSION['table_id'] ?? 'Tidak D
         <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
             <tr>
             <th class="p-4 rounded-tl-xl">Produk</th>
-            <th class="p-4 text-center w-20">Qty</th>
-            <th class="p-4 text-right rounded-tr-xl w-32">Subtotal</th>
+            <th class="p-4 text-center w-40">Qty</th>
+            <th class="p-4 text-right w-32">Subtotal</th>
+            <th class="p-4 text-center rounded-tr-xl w-20">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -117,10 +118,39 @@ $table_display = $_SESSION['table_number'] ?? ($_SESSION['table_id'] ?? 'Tidak D
             <tr class="border-b hover:bg-gray-50 transition">
                 <td class="p-4 font-medium text-gray-900">
                     <?= htmlspecialchars($it['product']['name']) ?>
-                    <p class="text-xs text-gray-500 mt-1"><?= currency($it['product']['price']) ?> x <?= $it['qty'] ?></p>
+                    <p class="text-xs text-gray-500 mt-1"><?= currency($it['product']['price']) ?> per item</p>
                 </td>
-                <td class="p-4 text-center text-gray-600"><?= $it['qty'] ?></td>
+                <td class="p-4">
+                    <!-- Tombol + / - untuk Update Quantity -->
+                    <div class="flex items-center justify-center space-x-2">
+                        <!-- Tombol Minus -->
+                        <a href="update_cart.php?action=decrease&id=<?= $it['product']['id'] ?>" 
+                           class="w-8 h-8 flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition transform hover:scale-110 active:scale-95"
+                           title="Kurangi">
+                            <i data-feather="minus" class="w-4 h-4"></i>
+                        </a>
+                        
+                        <!-- Display Quantity -->
+                        <span class="w-12 text-center font-bold text-lg text-gray-800"><?= $it['qty'] ?></span>
+                        
+                        <!-- Tombol Plus -->
+                        <a href="update_cart.php?action=increase&id=<?= $it['product']['id'] ?>" 
+                           class="w-8 h-8 flex items-center justify-center bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition transform hover:scale-110 active:scale-95"
+                           title="Tambah">
+                            <i data-feather="plus" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </td>
                 <td class="p-4 text-right font-semibold text-indigo-600"><?= currency($it['subtotal']) ?></td>
+                <td class="p-4 text-center">
+                    <!-- Tombol Hapus Item -->
+                    <a href="update_cart.php?action=delete&id=<?= $it['product']['id'] ?>" 
+                       class="inline-flex items-center justify-center w-9 h-9 bg-red-500 hover:bg-red-600 text-white rounded-lg transition transform hover:scale-110 active:scale-95"
+                       title="Hapus item"
+                       onclick="return confirm('Yakin ingin menghapus <?= htmlspecialchars($it['product']['name']) ?> dari keranjang?')">
+                        <i data-feather="trash-2" class="w-4 h-4"></i>
+                    </a>
+                </td>
             </tr>
             <?php endforeach; ?>
         </tbody>
@@ -137,10 +167,18 @@ $table_display = $_SESSION['table_number'] ?? ($_SESSION['table_id'] ?? 'Tidak D
         </div>
     </div>
 
-    <div class="mt-6 flex justify-end">
+    <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <!-- Tombol Kosongkan Keranjang -->
+        <a href="update_cart.php?action=clear" 
+           class="flex items-center space-x-2 px-5 py-2 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 transition transform hover:scale-105"
+           onclick="return confirm('Yakin ingin mengosongkan seluruh keranjang?')">
+            <i data-feather="trash-2" class="w-5 h-5"></i>
+            <span>Kosongkan Keranjang</span>
+        </a>
+        
         <!-- Tombol Checkout -->
         <form action="checkout.php" method="get">
-        <button type="submit" class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition transform hover:scale-105 text-xl">
+        <button type="submit" class="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition transform hover:scale-105 text-lg">
             <i data-feather="credit-card" class="w-6 h-6"></i>
             <span>Lanjutkan Checkout</span>
         </button>

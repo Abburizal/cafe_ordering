@@ -18,12 +18,18 @@ if (!$table_id) {
 }
 
 try {
-    // Hitung total harga
+    // Hitung total harga dan ambil nama meja
     $ids = array_keys($cart);
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
     $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
     $stmt->execute($ids);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Ambil nama meja
+    $stmt_table = $pdo->prepare("SELECT name FROM tables WHERE id = ?");
+    $stmt_table->execute([$table_id]);
+    $table_data = $stmt_table->fetch(PDO::FETCH_ASSOC);
+    $table_name = $table_data['name'] ?? 'Meja ' . $table_id;
 
     $total = 0;
     foreach ($products as $p) {
@@ -38,10 +44,10 @@ try {
 
     $pdo->beginTransaction();
 
-    // 1. Buat order baru
-    $insert = $pdo->prepare("INSERT INTO orders (order_code, user_id, table_id, total, payment_method, status)
-                             VALUES (?, NULL, ?, ?, ?, ?)");
-    $insert->execute([$order_code, $table_id, $total, $payment_method, $status]);
+    // 1. Buat order baru (database memiliki kolom table_number dan table_id)
+    $insert = $pdo->prepare("INSERT INTO orders (order_code, user_id, table_number, table_id, total, payment_method, status)
+                             VALUES (?, NULL, ?, ?, ?, ?, ?)");
+    $insert->execute([$order_code, $table_name, $table_id, $total, $payment_method, $status]);
     $order_id = $pdo->lastInsertId();
 
     // 2. Simpan item pesanan
@@ -116,7 +122,7 @@ try {
             <h1 class="text-3xl font-extrabold mb-2 text-green-700">Pesanan Berhasil Dibuat!</h1>
             
             <p class="text-gray-600 mb-6">
-                Pesanan kamu dengan pembayaran **Tunai** telah berhasil dicatat.
+                Pesanan Anda dengan pembayaran <strong>Tunai</strong> telah berhasil dicatat.
             </p>
 
             <!-- Detail Order -->
@@ -127,7 +133,7 @@ try {
                 </div>
                 <div class="flex justify-between mt-2 text-sm text-gray-700">
                     <span>Nomor Meja:</span>
-                    <strong><?= htmlspecialchars($table_id) ?></strong>
+                    <strong><?= htmlspecialchars($table_name) ?></strong>
                 </div>
                 <div class="h-px bg-green-200 my-3"></div>
                 <div class="flex justify-between text-lg font-extrabold text-gray-900">
@@ -136,14 +142,31 @@ try {
                 </div>
             </div>
 
-            <p class="text-sm text-gray-500 mb-6">
-                Silakan tunggu **waiter** kami untuk datang ke meja Anda dan mengonfirmasi pembayaran tunai ini.
-            </p>
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-6">
+                <div class="flex items-start">
+                    <i data-feather="info" class="w-5 h-5 text-yellow-600 mr-3 mt-0.5"></i>
+                    <div class="text-sm text-gray-700">
+                        <p class="font-semibold text-yellow-800 mb-1">Instruksi Pembayaran:</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Pesanan Anda sedang diproses dapur</li>
+                            <li>Waiter kami akan datang ke meja Anda</li>
+                            <li>Lakukan pembayaran tunai sebesar <strong><?= currency($total) ?></strong></li>
+                            <li>Waiter akan mengkonfirmasi pembayaran</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
 
-            <a href="menu.php" class="inline-flex items-center space-x-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
-              <i data-feather="home" class="w-5 h-5"></i>
-              <span>Kembali ke Menu</span>
-            </a>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="order_status.php?order_id=<?= $order_id ?>" class="flex-1 inline-flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition transform hover:scale-105">
+                    <i data-feather="eye" class="w-5 h-5"></i>
+                    <span>Cek Status Pesanan</span>
+                </a>
+                <a href="menu.php" class="flex-1 inline-flex items-center justify-center space-x-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                  <i data-feather="home" class="w-5 h-5"></i>
+                  <span>Kembali ke Menu</span>
+                </a>
+            </div>
         </div>
     </div>
     <?php else: ?>

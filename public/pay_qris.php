@@ -77,36 +77,38 @@ if (!$error_message) {
         // Mulai transaksi database
         $pdo->beginTransaction();
     
-        // 1. Buat order
-        // **PERBAIKAN ERROR:** Mengganti nama kolom 'total_amount' menjadi 'total' agar cocok dengan schema.sql
-        $stmt = $pdo->prepare("INSERT INTO orders (table_number, total, payment_method, status) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$table_number, $total_amount, 'qris', 'pending']);
+        // 1. Generate order code
+        $order_code = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        
+        // 2. Buat order
+        // Database memiliki kolom table_number (NOT NULL) dan table_id (nullable)
+        $stmt = $pdo->prepare("INSERT INTO orders (order_code, table_number, table_id, total, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$order_code, $table_number, $table_id, $total_amount, 'qris', 'pending']);
         $order_id = $pdo->lastInsertId();
     
-        // 2. Masukkan order items
-        $stmt_items = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
+        // 3. Masukkan order items
+        $stmt_items = $pdo->prepare("INSERT INTO order_items (order_id, product_id, qty, price) VALUES (?, ?, ?, ?)");
         foreach($product_details as $product_id => $details) {
             $stmt_items->execute([$order_id, $product_id, $details['qty'], $details['price']]);
         }
     
         $pdo->commit();
 
-        // 3. Buat QR Code (Simulasi)
+        // 4. Buat QR Code (Simulasi)
         // Di aplikasi nyata, Anda akan memanggil payment gateway API
         // dan mendapatkan string QRIS dari mereka.
         // Di sini kita buat QR code palsu yang berisi detail order.
-        $qris_string = "QRIS_PALSU:ORDER_ID_{$order_id}:TOTAL_RP_{$total_amount}";
+        $qris_string = "QRIS_SIMULASI:ORDER_{$order_id}:TOTAL_{$total_amount}";
         
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->writerOptions([])
-            ->data($qris_string)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
-            ->build();
+        $result = (new Builder(
+            writer: new PngWriter(),
+            data: $qris_string,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+            roundBlockSizeMode: RoundBlockSizeMode::Margin
+        ))->build();
 
         $qr_code_data_uri = $result->getDataUri();
 
@@ -177,9 +179,19 @@ if (!$error_message) {
             <img src="<?= $qr_code_data_uri ?>" alt="QR Code Pembayaran" class="border-4 border-gray-300 rounded-lg shadow-md">
         </div>
 
-        <p class="text-sm text-gray-500 mb-6">
-          Setelah membayar, pesanan Anda akan otomatis diproses oleh dapur.
+        <p class="text-sm text-gray-500 mb-4">
+          Setelah membayar, klik tombol di bawah untuk konfirmasi pembayaran.
         </p>
+
+        <!-- Tombol Konfirmasi Pembayaran -->
+        <form action="confirm_payment.php" method="POST" class="mb-4">
+            <input type="hidden" name="order_id" value="<?= $order_id ?>">
+            <input type="hidden" name="payment_method" value="qris">
+            <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition shadow-lg flex items-center justify-center space-x-2">
+                <i data-feather="check-circle" class="w-5 h-5"></i>
+                <span>Konfirmasi Pembayaran Sudah Dilakukan</span>
+            </button>
+        </form>
 
         <a href="order_status.php?order_id=<?= $order_id ?>" class="w-full inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg">
           Cek Status Pesanan Saya
@@ -190,4 +202,3 @@ if (!$error_message) {
   <script>feather.replace();</script>
 </body>
 </html>
-

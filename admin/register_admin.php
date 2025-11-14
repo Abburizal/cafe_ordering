@@ -18,10 +18,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($name === '' || $email === '' || $password === '') {
         $error = "Semua field wajib diisi.";
+    } elseif (strlen($password) < 6) {
+        $error = "Password minimal 6 karakter.";
     } else {
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'admin')");
-        $stmt->execute([$name, $email, $password]);
-        $success = "Admin baru berhasil diregistrasi.";
+        // Hash password untuk keamanan
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        
+        try {
+            $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'admin')");
+            $stmt->execute([$name, $email, $hashed_password]);
+            $success = "Admin baru berhasil diregistrasi. Silakan login.";
+        } catch (PDOException $e) {
+            $error = "Gagal registrasi. Email mungkin sudah terdaftar.";
+        }
     }
 }
 ?>

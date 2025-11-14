@@ -1,0 +1,13 @@
+# Placeholder Products
+
+Untuk testing, letakkan gambar produk di folder ini.
+
+Format yang disupport:
+- JPG/JPEG
+- PNG
+- GIF
+- WEBP
+
+Max size: 2MB
+Recommended size: 800x600px
+

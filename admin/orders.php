@@ -649,43 +649,7 @@ $adminName = e($_SESSION['username']);
     });
   </script>
 
-  <!-- added: simple polling script untuk cek pesanan baru setiap 15 detik -->
-  <script>
-    let currentPendingOrders = 0; // Inisialisasi
-
-    async function cekPesananBaru() {
-        try {
-            const res = await fetch('api/cek_pesanan_baru.php', { method: 'GET', headers: { 'Accept': 'application/json' } });
-            const data = await res.json();
-
-            if (typeof data.new_orders !== 'undefined') {
-                if (data.new_orders > 0 && data.new_orders > currentPendingOrders) {
-                    // Ada pesanan baru!
-                    const audio = document.getElementById('notificationSound');
-                    if (audio) {
-                        audio.play().catch(err => console.error('Gagal memutar suara notifikasi:', err));
-                    }
-                    alert('Ada pesanan baru!');
-                    // Auto-refresh halaman untuk menampilkan data baru
-                    location.reload();
-                }
-                currentPendingOrders = data.new_orders; // Update jumlah
-            } else {
-                console.warn('Response api/cek_pesanan_baru.php tidak mengandung field new_orders', data);
-            }
-        } catch (err) {
-            console.error('Error saat cekPesananBaru:', err);
-        } finally {
-            setTimeout(cekPesananBaru, 15000); // Polling setiap 15 detik
-        }
-    }
-
-    // Mulai polling setelah DOM siap
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => cekPesananBaru());
-    } else {
-        cekPesananBaru();
-    }
-  </script>
+  <!-- Notification handled by notification.js -->
+  <script src="assets/notification.js"></script>
 </body>
 </html>
