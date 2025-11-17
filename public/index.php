@@ -115,18 +115,25 @@ try {
             background-color: transparent; 
         }
         .animated-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
         }
         .animated-card:hover {
-            transform: translateY(-5px) scale(1.03);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: translateY(-12px) scale(1.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.3);
         }
         .card-image {
-            transition: transform 0.5s ease;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .animated-card:hover .card-image {
-            transform: scale(1.1) rotate(-3deg);
+            transform: scale(1.15) rotate(-5deg);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animated-card:hover {
+            animation: float 3s ease-in-out infinite;
         }
         .floating-navbar {
             background-color: rgba(255, 255, 255, 0.95);
@@ -204,25 +211,47 @@ try {
     <div class="card-container flex flex-wrap items-stretch justify-center max-w-6xl w-full">
 
         <?php foreach ($tables as $table) : ?>
-        <div class="flex-shrink-0 m-4 relative overflow-hidden bg-<?= $table['color'] ?>-500 rounded-2xl max-w-xs shadow-lg animated-card w-full sm:w-64">
+        <div class="flex-shrink-0 m-4 relative overflow-hidden bg-gradient-to-br from-<?= $table['color'] ?>-400 to-<?= $table['color'] ?>-600 rounded-3xl max-w-xs shadow-2xl animated-card w-full sm:w-72 border-2 border-white/20">
             <a href="index.php?code=<?= htmlspecialchars($table['code']) ?>" class="block h-full">
-                <svg class="absolute bottom-0 left-0 mb-8" viewBox="0 0 375 283" fill="none"
-                    style="transform: scale(1.5); opacity: 0.1;">
+                <!-- Decorative Background -->
+                <svg class="absolute bottom-0 left-0 mb-8 opacity-10" viewBox="0 0 375 283" fill="none"
+                    style="transform: scale(1.5);">
                     <rect x="159.52" y="175" width="152" height="152" rx="8" transform="rotate(-45 159.52 175)" fill="white" />
                     <rect y="107.48" width="152" height="152" rx="8" transform="rotate(-45 0 107.48)" fill="white" />
                 </svg>
-                <div class="relative pt-10 px-10 flex items-center justify-center">
+                
+                <!-- Table Image -->
+                <div class="relative pt-8 px-8 flex items-center justify-center">
                     <div class="block absolute w-48 h-48 bottom-0 left-0 -mb-24 ml-3"
-                        style="background: radial-gradient(black, transparent 60%); transform: rotate3d(0, 0, 1, 20deg) scale3d(1, 0.6, 1); opacity: 0.2;">
+                        style="background: radial-gradient(black, transparent 60%); transform: rotate3d(0, 0, 1, 20deg) scale3d(1, 0.6, 1); opacity: 0.15;">
                     </div>
-                    <img class="relative w-40 card-image" src="assets/meja.png" alt="Gambar Meja Restoran">
+                    <img class="relative w-36 card-image drop-shadow-2xl" src="assets/meja.png" alt="Gambar Meja Restoran">
                 </div>
-                <div class="relative text-white px-6 pb-6 mt-6">
-                    <div class="flex justify-between items-end">
-                        <span class="block font-bold text-2xl">Menu Untuk</span>
-                        <span class="block bg-white rounded-full text-<?= $table['color'] ?>-600 text-sm font-extrabold px-4 py-2 leading-none flex items-center shadow-lg border-2 border-white">
-                            <?= htmlspecialchars($table['display']) ?>
-                        </span>
+                
+                <!-- Table Info Section -->
+                <div class="relative text-white px-6 pb-8 mt-4">
+                    <!-- Table Number Badge - More Prominent -->
+                    <div class="flex justify-center mb-4">
+                        <div class="bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-3 shadow-2xl border-2 border-white transform -rotate-2 hover:rotate-0 transition-transform">
+                            <div class="text-center">
+                                <p class="text-xs font-semibold text-<?= $table['color'] ?>-500 uppercase tracking-wider mb-1">Table</p>
+                                <p class="text-2xl font-black text-<?= $table['color'] ?>-700 leading-none">
+                                    <?= htmlspecialchars($table['display']) ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Call to Action -->
+                    <div class="text-center">
+                        <p class="text-white/90 font-semibold text-sm mb-2">Tap untuk mulai pesan</p>
+                        <div class="flex items-center justify-center space-x-2 text-white/80 text-xs">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
+                            <span>Lihat Menu</span>
+                        </div>
+                        </div>
                     </div>
                 </div>
             </a>
