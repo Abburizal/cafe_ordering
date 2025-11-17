@@ -95,6 +95,7 @@ $statusClassMap = [
         <a href="dashboard.php" class="text-indigo-600 font-semibold border-b-2 border-indigo-600 pb-1">Dashboard</a>
         <a href="product.php" class="hover:text-indigo-600 transition">Produk</a>
         <a href="orders.php" class="hover:text-indigo-600 transition">Orders</a>
+        <a href="tables.php" class="hover:text-indigo-600 transition">Meja</a>
       </nav>
 
       <!-- Aksi kanan -->
@@ -114,6 +115,7 @@ $statusClassMap = [
         <a href="dashboard.php" class="block px-4 py-2 bg-indigo-50 font-semibold text-indigo-700 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Dashboard</a>
         <a href="product.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="package" class="w-4 h-4 mr-2"></i> Produk</a>
         <a href="orders.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> Orders</a>
+        <a href="tables.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Meja</a>
         <hr class="my-1">
         <a href="logout.php" class="block px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center"><i data-feather="log-out" class="w-4 h-4 mr-2"></i> Logout</a>
       </div>
