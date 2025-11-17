@@ -106,75 +106,66 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
     <title>Manajemen Produk - Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; }
         @keyframes popup {
-            0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+            0% { transform: scale(0.8) translateY(100%); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
-        .popup { animation: popup 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .dropdown-transition { transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); }
+        .popup { animation: popup 0.4s ease-out; }
         .input-style {
-            @apply border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-colors duration-200 shadow-sm;
+            @apply border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-colors duration-200 shadow-sm;
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-stone-100 min-h-screen">
 
     <!-- Navbar -->
-    <header class="fixed top-0 left-0 right-0 z-50 flex justify-center py-3">
-        <div class="flex items-center justify-between w-full max-w-7xl mx-4 bg-white/90 backdrop-blur-md border border-gray-200 rounded-2xl shadow-lg px-5 py-3 relative">
+    <header class="fixed top-3 left-0 right-0 z-50 flex justify-center">
+        <div class="flex items-center justify-between w-[95%] md:w-[80%] lg:w-[70%] bg-white/80 backdrop-blur-lg border border-gray-200 rounded-3xl shadow-xl px-5 py-3 relative">
             
-            <!-- Logo & Title -->
+            <!-- Logo -->
             <div class="flex items-center space-x-2">
-                <img src="https://placehold.co/24x24/1F2937/FFFFFF?text=A" class="h-6" alt="Logo Placeholder">
-                <span class="text-xl font-bold text-gray-800 hidden sm:block">Admin Panel</span>
+                <i data-feather="trello" class="h-6 w-6 text-indigo-600 stroke-[2]"></i>
+                <span class="text-xl font-bold text-gray-800 hidden sm:inline">Admin Resto</span>
             </div>
 
             <!-- Menu desktop -->
-            <nav class="hidden md:flex items-center space-x-8 text-sm font-medium">
-                <a href="dashboard.php" class="text-gray-600 hover:text-blue-600 transition duration-150">Dashboard</a>
-                <a href="product.php" class="text-blue-600 font-semibold border-b-2 border-blue-600 pb-1">Produk</a>
-                <a href="orders.php" class="text-gray-600 hover:text-blue-600 transition duration-150">Orders</a>
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+                <a href="dashboard.php" class="hover:text-indigo-600 transition">Dashboard</a>
+                <a href="product.php" class="text-indigo-600 font-semibold border-b-2 border-indigo-600 pb-1">Produk</a>
+                <a href="orders.php" class="hover:text-indigo-600 transition">Orders</a>
+                <a href="tables.php" class="hover:text-indigo-600 transition">Meja</a>
             </nav>
 
-            <!-- Tombol kanan / User Dropdown -->
+            <!-- Aksi kanan -->
             <div class="hidden md:flex items-center space-x-3">
-                <div class="relative group">
-                    <button class="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition duration-150 text-sm font-medium">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                        </svg>
-                        <span><?= $adminName ?></span>
-                    </button>
-                    <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl py-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 dropdown-transition pointer-events-none group-hover:pointer-events-auto">
-                        <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg mx-1 my-1">
-                            Sign Out
-                        </a>
-                    </div>
-                </div>
+                <a href="logout.php" class="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm hover:bg-red-100 font-medium transition shadow-sm">
+                    <i data-feather="log-out" class="w-4 h-4 inline mr-1"></i> Sign out
+                </a>
             </div>
 
             <!-- Tombol menu mobile -->
-            <button id="menuBtn" class="md:hidden flex items-center p-2 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none transition duration-150">
-                <svg id="menuIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+            <button id="menuBtn" class="md:hidden flex items-center p-2 rounded-lg hover:bg-gray-100 focus:outline-none">
+                <i data-feather="menu" id="menuIcon" class="h-6 w-6 text-gray-700"></i>
             </button>
 
             <!-- Dropdown mobile -->
-            <div id="dropdownMenu" class="hidden absolute top-full right-4 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl py-2 text-sm z-50 dropdown-transition opacity-0">
-                <a href="dashboard.php" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Dashboard</a>
-                <a href="product.php" class="block px-4 py-2 text-blue-600 font-semibold hover:bg-gray-100">Produk</a>
-                <a href="orders.php" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Orders</a>
-                <a href="logout.php" class="block px-4 py-2 text-red-600 hover:bg-red-50 mt-1 border-t border-gray-100">Sign Out</a>
+            <div id="dropdownMenu" class="hidden absolute top-16 right-4 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-2 text-sm z-50">
+                <a href="dashboard.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Dashboard</a>
+                <a href="product.php" class="block px-4 py-2 bg-indigo-50 font-semibold text-indigo-700 flex items-center"><i data-feather="package" class="w-4 h-4 mr-2"></i> Produk</a>
+                <a href="orders.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> Orders</a>
+                <a href="tables.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Meja</a>
+                <hr class="my-1">
+                <a href="logout.php" class="block px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center"><i data-feather="log-out" class="w-4 h-4 mr-2"></i> Logout</a>
             </div>
         </div>
     </header>
 
     <!-- Konten Utama -->
-    <main class="pt-28 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+    <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
         <h2 class="text-3xl font-extrabold text-gray-800 mb-8">Manajemen Produk</h2>
 
         <!-- Form Tambah Produk (Card Style) - Diperbarui dengan Stok & Deskripsi -->
@@ -551,6 +542,26 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
                 hideModal();
             }
         });
+
+        // Mobile menu toggle
+        const menuBtn = document.getElementById('menuBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        
+        if (menuBtn && dropdownMenu) {
+            menuBtn.addEventListener('click', () => {
+                dropdownMenu.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.add('hidden');
+                }
+            });
+        }
+
+        // Initialize Feather Icons
+        feather.replace();
     </script>
 
 </body>
