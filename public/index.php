@@ -274,7 +274,7 @@ try {
     </div>
     
     <!-- Footer -->
-    <div class="w-full text-center text-gray-500 text-sm mt-10 mb-20">created by satriyo nugroho</div>
+    <div class="w-full text-center text-gray-500 text-sm mt-10 mb-20">created by Muhammad Rifa 10121027</div>
 </main>
 
 <script>
