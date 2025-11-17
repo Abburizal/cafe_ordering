@@ -60,10 +60,12 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
                         // Tentukan URL berdasarkan BASE_URL dari config
                         $url = BASE_URL . '/index.php?code=' . htmlspecialchars($table['code']);
                         
-                        // Generate QR Code (endroid/qr-code v6)
-                        $qrCode = new QrCode($url);
-                        $qrCode->setSize(300);
-                        $qrCode->setMargin(10);
+                        // Generate QR Code (endroid/qr-code v6 - readonly class with constructor params)
+                        $qrCode = new QrCode(
+                            data: $url,
+                            size: 300,
+                            margin: 10
+                        );
                         
                         $writer = new PngWriter();
                         $result = $writer->write($qrCode);
