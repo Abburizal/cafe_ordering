@@ -2,8 +2,7 @@
 require_once '../../config/config.php';
 require_once '../../vendor/autoload.php'; // Panggil autoloader composer
 
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 
 // Pastikan admin login
@@ -61,14 +60,13 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
                         // Tentukan URL berdasarkan BASE_URL dari config
                         $url = BASE_URL . '/index.php?code=' . htmlspecialchars($table['code']);
                         
-                        // Generate QR Code using Builder (endroid/qr-code v5+)
-                        $result = Builder::create()
-                            ->writer(new PngWriter())
-                            ->data($url)
-                            ->encoding(new Encoding('UTF-8'))
-                            ->size(300)
-                            ->margin(10)
-                            ->build();
+                        // Generate QR Code (endroid/qr-code v6)
+                        $qrCode = new QrCode($url);
+                        $qrCode->setSize(300);
+                        $qrCode->setMargin(10);
+                        
+                        $writer = new PngWriter();
+                        $result = $writer->write($qrCode);
                         
                         // Tampilkan sebagai Data URI
                         echo '<img src="' . $result->getDataUri() . '" alt="QR Code ' . htmlspecialchars($table['name']) . '" class="mx-auto rounded-lg shadow-md mb-4">';
