@@ -72,6 +72,7 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kelola Meja - Admin RestoKu</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -88,26 +89,52 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
         .modal.active { display: flex; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-indigo-600">RestoKu Admin</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="dashboard.php" class="text-gray-700 hover:text-indigo-600 font-medium">Dashboard</a>
-                    <a href="product.php" class="text-gray-700 hover:text-indigo-600 font-medium">Produk</a>
-                    <a href="orders.php" class="text-gray-700 hover:text-indigo-600 font-medium">Pesanan</a>
-                    <a href="tables.php" class="text-indigo-600 font-bold">Meja</a>
-                    <a href="logout.php" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Logout</a>
-                </div>
-            </div>
-        </div>
-    </nav>
+<body class="bg-stone-100 min-h-screen">
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Navbar -->
+  <header class="fixed top-3 left-0 right-0 z-50 flex justify-center">
+    <div class="flex items-center justify-between w-[95%] md:w-[80%] lg:w-[70%] bg-white/80 backdrop-blur-lg border border-gray-200 rounded-3xl shadow-xl px-5 py-3 relative">
+      
+      <!-- Logo -->
+      <div class="flex items-center space-x-2">
+        <i data-feather="trello" class="h-6 w-6 text-indigo-600 stroke-[2]"></i>
+        <span class="text-xl font-bold text-gray-800 hidden sm:inline">Admin Resto</span>
+      </div>
+
+      <!-- Menu desktop -->
+      <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+        <a href="dashboard.php" class="hover:text-indigo-600 transition">Dashboard</a>
+        <a href="product.php" class="hover:text-indigo-600 transition">Produk</a>
+        <a href="orders.php" class="hover:text-indigo-600 transition">Orders</a>
+        <a href="tables.php" class="text-indigo-600 font-semibold border-b-2 border-indigo-600 pb-1">Meja</a>
+      </nav>
+
+      <!-- Aksi kanan -->
+      <div class="hidden md:flex items-center space-x-3">
+        <a href="logout.php" class="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm hover:bg-red-100 font-medium transition shadow-sm">
+            <i data-feather="log-out" class="w-4 h-4 inline mr-1"></i> Sign out
+        </a>
+      </div>
+
+      <!-- Tombol menu mobile -->
+      <button id="menuBtn" class="md:hidden flex items-center p-2 rounded-lg hover:bg-gray-100 focus:outline-none">
+        <i data-feather="menu" id="menuIcon" class="h-6 w-6 text-gray-700"></i>
+      </button>
+
+      <!-- Dropdown mobile -->
+      <div id="dropdownMenu" class="hidden absolute top-16 right-4 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-2 text-sm z-50">
+        <a href="dashboard.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Dashboard</a>
+        <a href="product.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="package" class="w-4 h-4 mr-2"></i> Produk</a>
+        <a href="orders.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> Orders</a>
+        <a href="tables.php" class="block px-4 py-2 bg-indigo-50 font-semibold text-indigo-700 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Meja</a>
+        <hr class="my-1">
+        <a href="logout.php" class="block px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center"><i data-feather="log-out" class="w-4 h-4 mr-2"></i> Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Konten -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         <!-- Header -->
         <div class="flex justify-between items-center mb-6">
             <div>
@@ -311,6 +338,26 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
                 }
             });
         }
+
+        // Mobile menu toggle
+        const menuBtn = document.getElementById('menuBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        
+        if (menuBtn && dropdownMenu) {
+            menuBtn.addEventListener('click', () => {
+                dropdownMenu.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.add('hidden');
+                }
+            });
+        }
+
+        // Initialize Feather Icons
+        feather.replace();
     </script>
 </body>
 </html>
