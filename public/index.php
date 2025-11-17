@@ -266,7 +266,6 @@ try {
                         </div>
                     </div>
                 </div>
-                </div>
             </a>
         </div>
         <?php endforeach; ?>
