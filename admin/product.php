@@ -433,28 +433,33 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
     <?php endif; ?>
 
     <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            
         // Dropdown mobile toggle
         const menuBtn = document.getElementById('menuBtn');
         const dropdown = document.getElementById('dropdownMenu');
         let open = false;
 
-        menuBtn.addEventListener('click', () => {
-            open = !open;
-            if (open) {
-                dropdown.classList.remove('hidden');
-                setTimeout(() => {
-                    dropdown.classList.add('opacity-100');
-                    dropdown.classList.remove('opacity-0');
-                    dropdown.style.transform = 'translateY(0)';
-                }, 10); 
-            } else {
-                dropdown.classList.add('opacity-0');
-                dropdown.style.transform = 'translateY(-10px)';
-                setTimeout(() => {
-                    dropdown.classList.add('hidden');
-                }, 300); 
-            }
-        });
+        if (menuBtn && dropdown) {
+            menuBtn.addEventListener('click', () => {
+                open = !open;
+                if (open) {
+                    dropdown.classList.remove('hidden');
+                    setTimeout(() => {
+                        dropdown.classList.add('opacity-100');
+                        dropdown.classList.remove('opacity-0');
+                        dropdown.style.transform = 'translateY(0)';
+                    }, 10); 
+                } else {
+                    dropdown.classList.add('opacity-0');
+                    dropdown.style.transform = 'translateY(-10px)';
+                    setTimeout(() => {
+                        dropdown.classList.add('hidden');
+                    }, 300); 
+                }
+            });
+        }
 
         // --- Custom Edit Modal Logic (BARU) ---
         const editBtns = document.querySelectorAll('.edit-btn');
@@ -588,25 +593,12 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
             }
         });
 
-        // Mobile menu toggle
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        
-        if (menuBtn && dropdownMenu) {
-            menuBtn.addEventListener('click', () => {
-                dropdownMenu.classList.toggle('hidden');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                    dropdownMenu.classList.add('hidden');
-                }
-            });
-        }
+        }); // End DOMContentLoaded
 
-        // Initialize Feather Icons
-        feather.replace();
+        // Initialize Feather Icons (outside DOMContentLoaded)
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
     </script>
 
 </body>
