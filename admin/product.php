@@ -62,6 +62,39 @@ if (isset($_GET['activate'])) {
     $message = "✅ Produk berhasil diaktifkan kembali!";
 }
 
+// === Delete Produk Permanen ===
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    
+    // Cek apakah produk ada di order_items
+    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM order_items WHERE product_id = ?");
+    $checkStmt->execute([$id]);
+    $orderCount = $checkStmt->fetchColumn();
+    
+    if ($orderCount > 0) {
+        $message = "⚠️ Produk tidak dapat dihapus karena masih ada di riwayat pesanan! Gunakan 'Arsip' sebagai gantinya.";
+    } else {
+        // Get product image untuk dihapus
+        $stmt = $pdo->prepare("SELECT image FROM products WHERE id = ?");
+        $stmt->execute([$id]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Delete from database
+        $deleteStmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
+        $deleteStmt->execute([$id]);
+        
+        // Delete image file if exists
+        if ($product && $product['image']) {
+            $imagePath = "../public/assets/images/" . $product['image'];
+            if (file_exists($imagePath)) {
+                @unlink($imagePath);
+            }
+        }
+        
+        $message = "🗑️ Produk berhasil dihapus permanen!";
+    }
+}
+
 // === Edit Produk ===
 if (isset($_POST['edit'])) {
     $id = (int)$_POST['product_id'];
@@ -264,14 +297,18 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
                             </button>
                             
                             <?php if ($p['is_active'] == 1): ?>
-                                <!-- Tombol Hapus diganti menjadi Tombol Arsip -->
-                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="archive" class="delete-btn text-red-500 hover:text-red-700 font-semibold px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 transition duration-150 text-sm">
+                                <!-- Tombol Arsip -->
+                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="archive" class="action-btn text-orange-600 hover:text-orange-700 font-semibold px-3 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 transition duration-150 text-sm">
                                     Arsip
                                 </button>
                             <?php else: ?>
                                 <!-- Tombol Aktifkan kembali -->
-                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="activate" class="delete-btn text-green-600 hover:text-green-700 font-semibold px-3 py-1 rounded-lg bg-green-50 hover:bg-green-100 transition duration-150 text-sm">
+                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="activate" class="action-btn text-green-600 hover:text-green-700 font-semibold px-3 py-1 rounded-lg bg-green-50 hover:bg-green-100 transition duration-150 text-sm">
                                     Aktifkan
+                                </button>
+                                <!-- Tombol Delete Permanen (hanya untuk produk non-aktif) -->
+                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="delete" class="action-btn text-red-600 hover:text-red-700 font-semibold px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 transition duration-150 text-sm">
+                                    Hapus
                                 </button>
                             <?php endif; ?>
                         </td>
@@ -480,8 +517,8 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
         });
 
 
-        // --- Custom Action Modal Logic (for Archive/Activate) ---
-        const actionBtns = document.querySelectorAll('.delete-btn');
+        // --- Custom Action Modal Logic (for Archive/Activate/Delete) ---
+        const actionBtns = document.querySelectorAll('.action-btn');
         const actionModal = document.getElementById('actionModal');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
@@ -498,20 +535,28 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
 
                 if (action === 'archive') {
                     title = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg><span>Arsip Produk</span>`;
-                    modalTitle.classList.remove('text-green-600');
-                    modalTitle.classList.add('text-red-600');
+                    modalTitle.classList.remove('text-green-600', 'text-red-600');
+                    modalTitle.classList.add('text-orange-600');
                     message = `Apakah Anda yakin ingin mengarsip produk <strong>${name}</strong>? Produk akan disembunyikan dari menu utama, tetapi riwayat pesanan tetap aman.`;
                     urlParam = `?archive=${id}`;
-                    btnClass = 'bg-red-600 hover:bg-red-700';
+                    btnClass = 'bg-orange-600 hover:bg-orange-700';
                     confirmAction.textContent = 'Ya, Arsipkan';
                 } else if (action === 'activate') {
                     title = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.27a11.971 11.971 0 00-6.726-3.868 12.001 12.001 0 00-1.732 0 11.971 11.971 0 00-6.726 3.868m16.634 0a12.001 12.001 0 01-1.416 3.993 12.004 12.004 0 01-.482 1.096m-16.197 0a12.004 12.004 0 00-.482-1.096 12.003 12.003 0 01-1.416-3.993m16.634 0a12.001 12.001 0 00-1.416-3.993 12.004 12.004 0 00-.482-1.096" /></svg><span>Aktifkan Produk</span>`;
-                    modalTitle.classList.remove('text-red-600');
+                    modalTitle.classList.remove('text-red-600', 'text-orange-600');
                     modalTitle.classList.add('text-green-600');
                     message = `Anda yakin ingin mengaktifkan kembali produk <strong>${name}</strong>? Produk akan muncul kembali di menu utama.`;
                     urlParam = `?activate=${id}`;
                     btnClass = 'bg-green-600 hover:bg-green-700';
                     confirmAction.textContent = 'Ya, Aktifkan';
+                } else if (action === 'delete') {
+                    title = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Hapus Produk Permanen</span>`;
+                    modalTitle.classList.remove('text-green-600', 'text-orange-600');
+                    modalTitle.classList.add('text-red-600');
+                    message = `<strong>⚠️ PERHATIAN:</strong> Anda akan menghapus produk <strong>${name}</strong> secara <strong>PERMANEN</strong>! Data tidak dapat dikembalikan. Yakin ingin melanjutkan?`;
+                    urlParam = `?delete=${id}`;
+                    btnClass = 'bg-red-600 hover:bg-red-700';
+                    confirmAction.textContent = 'Ya, Hapus Permanen';
                 }
 
                 // Set modal content
