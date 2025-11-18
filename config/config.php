@@ -23,8 +23,9 @@ try {
 define('MIDTRANS_SERVER_KEY', 'YOUR_MIDTRANS_SERVER_KEY');
 define('MIDTRANS_IS_PRODUCTION', false); 
 // BASE_URL - Ganti dengan IP address untuk akses dari smartphone
-// Development: gunakan IP local (192.168.1.27)
-// Production: ganti dengan domain Anda
-define('BASE_URL', 'http://192.168.1.27/cafe_ordering/public');
+// Development: gunakan IP local
+// WiFi Router: 192.168.1.27
+// Hotspot iPhone: 172.20.10.2
+define('BASE_URL', 'http://172.20.10.2/cafe_ordering/public');
 
 // Hapus '}' ekstra di akhir file
