@@ -8,6 +8,21 @@ require_admin();
 
 $message = '';
 
+// Function to sanitize filename
+function sanitizeFilename($filename) {
+    // Get file extension
+    $ext = pathinfo($filename, PATHINFO_EXTENSION);
+    $name = pathinfo($filename, PATHINFO_FILENAME);
+    
+    // Remove special characters, spaces, and convert to lowercase
+    $name = strtolower($name);
+    $name = preg_replace('/[^a-z0-9_-]/', '_', $name);
+    $name = preg_replace('/_+/', '_', $name); // Replace multiple underscores with single
+    $name = trim($name, '_'); // Remove leading/trailing underscores
+    
+    return $name . '.' . strtolower($ext);
+}
+
 // === Tambah Produk ===
 if (isset($_POST['add'])) {
     $name = trim($_POST['name']);
@@ -18,17 +33,22 @@ if (isset($_POST['add'])) {
     $description = trim($_POST['description'] ?? NULL);
 
     if ($name !== '' && $price !== '' && $image !== '') {
-        // Assume file move logic is correct for presentation
         $targetDir = "../public/assets/images/";
-        // Tambahkan timestamp atau random string ke nama file agar unik
-        $uniqueImageName = time() . '_' . basename($image); 
+        
+        // Sanitize filename and add timestamp for uniqueness
+        $sanitizedName = sanitizeFilename($image);
+        $uniqueImageName = time() . '_' . $sanitizedName;
         $targetFile = $targetDir . $uniqueImageName;
-        @move_uploaded_file($_FILES['image']['tmp_name'], $targetFile); 
-
-        // Menambahkan kolom is_active=1 secara default
-        $stmt = $pdo->prepare("INSERT INTO products (name, price, image, stock, description, is_active) VALUES (?, ?, ?, ?, ?, 1)");
-        $stmt->execute([$name, $price, $uniqueImageName, $stock, $description]);
-        $message = "🎉 Produk baru berhasil ditambahkan!";
+        
+        // Move uploaded file
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+            // Menambahkan kolom is_active=1 secara default
+            $stmt = $pdo->prepare("INSERT INTO products (name, price, image, stock, description, is_active) VALUES (?, ?, ?, ?, ?, 1)");
+            $stmt->execute([$name, $price, $uniqueImageName, $stock, $description]);
+            $message = "🎉 Produk baru berhasil ditambahkan!";
+        } else {
+            $message = "⚠️ Gagal mengupload gambar!";
+        }
     } else {
         $message = "⚠️ Nama, Harga, dan Gambar wajib diisi!";
     }
@@ -110,12 +130,25 @@ if (isset($_POST['edit'])) {
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
         $image = $_FILES['image']['name'];
         $targetDir = "../public/assets/images/";
-        // Tambahkan timestamp atau random string ke nama file agar unik
-        $uniqueImageName = time() . '_' . basename($image); 
+        
+        // Sanitize filename and add timestamp for uniqueness
+        $sanitizedName = sanitizeFilename($image);
+        $uniqueImageName = time() . '_' . $sanitizedName;
         $targetFile = $targetDir . $uniqueImageName;
         
-        // Pindahkan file baru
-        @move_uploaded_file($_FILES['image']['tmp_name'], $targetFile); 
+        // Move uploaded file
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+            // Delete old image if exists and different from current
+            if ($currentImage && $currentImage !== $uniqueImageName) {
+                $oldImagePath = $targetDir . $currentImage;
+                if (file_exists($oldImagePath)) {
+                    @unlink($oldImagePath);
+                }
+            }
+        } else {
+            // If upload fails, keep current image
+            $uniqueImageName = $currentImage;
+        }
     }
 
     if ($name !== '' && $price !== '') {
