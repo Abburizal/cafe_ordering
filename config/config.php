@@ -1,31 +1,40 @@
 <?php
-session_start();
+/**
+ * Database Configuration - Render.com Compatible
+ */
 
-// Database
-define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'cafe_ordering');   
-define('DB_USER', 'root');     
-define('DB_PASS', '');        
+// Get environment variables with fallbacks
+$host = getenv('DB_HOST') ?: (getenv('MYSQL_HOST') ?: 'localhost');
+$db = getenv('DB_NAME') ?: (getenv('MYSQL_DATABASE') ?: 'cafe_ordering');
+$user = getenv('DB_USER') ?: (getenv('MYSQL_USER') ?: 'root');
+$pass = getenv('DB_PASS') ?: (getenv('MYSQL_PASSWORD') ?: '');
 
-try {
-    $pdo = new PDO(
-        "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4",
-        DB_USER,
-        DB_PASS,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-} catch (PDOException $e) {
-    die("DB Connection failed: " . $e->getMessage());
+// Error handling
+if (!$host || !$db || !$user) {
+    error_log("Database configuration incomplete. Check environment variables.");
+    die("Database configuration error. Contact administrator.");
 }
 
-// Midtrans (sandbox)
-// ... (isi file config.php) ...
-define('MIDTRANS_SERVER_KEY', 'YOUR_MIDTRANS_SERVER_KEY');
-define('MIDTRANS_IS_PRODUCTION', false); 
-// BASE_URL - Ganti dengan IP address untuk akses dari smartphone
-// Development: gunakan IP local
-// WiFi Router: 192.168.1.27
-// Hotspot iPhone: 172.20.10.2
-define('BASE_URL', 'http://172.20.10.2/cafe_ordering/public');
-
-// Hapus '}' ekstra di akhir file
+try {
+    // Create PDO connection
+    $pdo = new PDO(
+        "mysql:host=$host;dbname=$db;charset=utf8mb4",
+        $user,
+        $pass,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]
+    );
+    
+    // Log successful connection (only in dev)
+    if (getenv('APP_ENV') !== 'production') {
+        error_log("Database connected: $host / $db");
+    }
+    
+} catch (PDOException $e) {
+    error_log("PDO Connection Error: " . $e->getMessage());
+    die("Database connection failed. Contact administrator.");
+}
+?>

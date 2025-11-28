@@ -175,14 +175,27 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { 
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
         @keyframes popup {
             0% { transform: scale(0.8) translateY(100%); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         .popup { animation: popup 0.4s ease-out; }
         .input-style {
-            @apply border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-colors duration-200 shadow-sm;
+            @apply border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-colors duration-200 shadow-sm;
+        }
+        /* Optimasi untuk perangkat mobile */
+        @media (max-width: 640px) {
+            body {
+                font-size: 14px;
+            }
+            * {
+                -webkit-tap-highlight-color: transparent;
+            }
         }
     </style>
 </head>
@@ -231,69 +244,84 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
     </header>
 
     <!-- Konten Utama -->
-    <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
-        <h2 class="text-3xl font-extrabold text-gray-800 mb-8">Manajemen Produk</h2>
+    <main class="pt-24 pb-12 px-3 sm:px-4 md:px-8 max-w-7xl mx-auto">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-6 sm:mb-8">Manajemen Produk</h2>
 
         <!-- Form Tambah Produk (Card Style) - Diperbarui dengan Stok & Deskripsi -->
-        <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100 mb-10">
-            <h3 class="text-xl font-bold mb-5 text-gray-800 flex items-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-gray-100 mb-8 sm:mb-10">
+            <h3 class="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-gray-800 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>Tambah Produk Baru</span>
             </h3>
-            <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 items-end">
-                <input type="text" name="name" placeholder="Nama Produk" required class="input-style col-span-1">
-                
-                <div class="col-span-1">
-                    <label for="price" class="text-xs font-medium text-gray-500 mb-1 block">Harga (Rp)</label>
-                    <input type="number" name="price" placeholder="e.g., 15000000" required class="input-style w-full" id="price">
+            <form method="POST" enctype="multipart/form-data" class="space-y-4 sm:space-y-5">
+                <!-- Row 1: Nama Produk & Harga -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label for="name_add" class="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2 block">Nama Produk *</label>
+                        <input type="text" name="name" id="name_add" placeholder="Contoh: Kopi Latte" required class="input-style w-full text-sm sm:text-base">
+                    </div>
+                    
+                    <div>
+                        <label for="price" class="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2 block">Harga (Rp) *</label>
+                        <input type="number" name="price" id="price" placeholder="Contoh: 25000" required class="input-style w-full text-sm sm:text-base">
+                    </div>
                 </div>
 
-                <div class="col-span-1">
-                    <label for="stock_add" class="text-xs font-medium text-gray-500 mb-1 block">Stok</label>
-                    <input type="number" name="stock" placeholder="Stok (default 100)" class="input-style w-full" id="stock_add" value="100">
+                <!-- Row 2: Stok & Deskripsi -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label for="stock_add" class="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2 block">Stok</label>
+                        <input type="number" name="stock" id="stock_add" placeholder="Default: 100" class="input-style w-full text-sm sm:text-base" value="100">
+                    </div>
+
+                    <div>
+                        <label for="description_add" class="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2 block">Deskripsi (Opsional)</label>
+                        <input type="text" name="description" id="description_add" placeholder="Deskripsi singkat produk..." class="input-style w-full text-sm sm:text-base">
+                    </div>
                 </div>
 
-                <div class="col-span-1">
-                    <label for="description_add" class="text-xs font-medium text-gray-500 mb-1 block">Deskripsi (Opsional)</label>
-                    <textarea name="description" placeholder="Deskripsi singkat produk..." rows="1" class="input-style w-full resize-none" id="description_add"></textarea>
-                </div>
-
-                <div class="col-span-2">
-                    <label for="image" class="text-xs font-medium text-gray-500 mb-1 block">Gambar Produk</label>
-                    <!-- Custom file input style -->
-                    <input type="file" name="image" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/bmp,image/svg+xml,image/tiff" required
-                        class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0 file:text-sm file:font-semibold
+                <!-- Row 3: Gambar -->
+                <div>
+                    <label for="image" class="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2 block">Gambar Produk *</label>
+                    <input type="file" name="image" id="image" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/bmp,image/svg+xml,image/tiff" required
+                        class="w-full text-xs sm:text-sm text-slate-500 file:mr-3 file:py-2 sm:file:py-2.5 file:px-4 sm:file:px-5
+                                file:rounded-lg sm:file:rounded-xl file:border-0 file:text-xs sm:file:text-sm file:font-semibold
                                 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100
-                                file:cursor-pointer rounded-xl border border-gray-300 p-1.5" />
-                    <p class="text-xs text-gray-400 mt-1">Format: JPG, PNG, GIF, WebP, AVIF, BMP, SVG, TIFF (Max 5MB)</p>
+                                file:cursor-pointer rounded-lg sm:rounded-xl border-2 border-gray-300 p-1.5 sm:p-2 hover:border-blue-400 transition" />
+                    <p class="text-[10px] sm:text-xs text-gray-500 mt-1.5 sm:mt-2">Format: JPG, PNG, GIF, WebP, AVIF, BMP, SVG, TIFF (Max 5MB)</p>
                 </div>
                 
-                <button type="submit" name="add" class="col-span-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 font-semibold transition-all shadow-md hover:shadow-lg transform active:scale-[.98]">
-                    ➕ Tambah
-                </button>
+                <!-- Submit Button -->
+                <div class="pt-1 sm:pt-2">
+                    <button type="submit" name="add" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold transition-all shadow-lg hover:shadow-xl transform active:scale-[.98] flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Tambah Produk</span>
+                    </button>
+                </div>
             </form>
         </div>
 
         <!-- Tabel Produk (Modern Table Style) -->
-        <div class="bg-white rounded-3xl shadow-xl border border-gray-100 p-4 md:p-6 overflow-x-auto">
-            <h3 class="text-xl font-bold mb-5 text-gray-800">Daftar Produk</h3>
+        <div class="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 p-3 sm:p-4 md:p-6 overflow-x-auto">
+            <h3 class="text-lg sm:text-xl font-bold mb-4 sm:mb-5 text-gray-800">Daftar Produk</h3>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider rounded-tl-xl">ID</th>
-                        <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Gambar</th>
-                        <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nama Produk</th>
-                        <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Harga</th>
-                        <th class="py-3 px-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider rounded-tr-xl">Status & Aksi</th>
+                        <th class="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider rounded-tl-xl">ID</th>
+                        <th class="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider">Gambar</th>
+                        <th class="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider">Nama</th>
+                        <th class="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider">Harga</th>
+                        <th class="py-2 sm:py-3 px-2 sm:px-4 text-center text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider rounded-tr-xl">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                 <?php if (empty($products)): ?>
                     <tr>
-                        <td colspan="5" class="text-center text-gray-500 py-10 text-lg font-medium bg-white">
+                        <td colspan="5" class="text-center text-gray-500 py-8 sm:py-10 text-sm sm:text-lg font-medium bg-white">
                             😴 Belum ada produk yang ditambahkan.
                         </td>
                     </tr>
@@ -302,48 +330,50 @@ $adminName = e($_SESSION['username'] ?? 'Admin');
                     $rowClass = $p['is_active'] == 0 ? 'bg-gray-100 text-gray-500 italic' : 'hover:bg-blue-50/50 transition duration-150';
                 ?>
                     <tr class="<?= $rowClass ?>">
-                        <td class="py-4 px-4 text-sm font-medium text-gray-500"><?= $i++ ?></td>
-                        <td class="py-4 px-4">
+                        <td class="py-3 sm:py-5 px-2 sm:px-4 text-xs sm:text-sm font-medium text-gray-500"><?= $i++ ?></td>
+                        <td class="py-3 sm:py-5 px-2 sm:px-4">
                             <!-- Placeholder image URL is used here since we can't guarantee existence of uploaded images -->
                             <img src="../public/assets/images/<?= e($p['image']) ?>" 
-                                onerror="this.onerror=null; this.src='https://placehold.co/60x60/f3f4f6/374151?text=IMG'"
-                                alt="<?= e($p['name']) ?>" class="w-14 h-14 rounded-lg object-cover shadow-md">
+                                onerror="this.onerror=null; this.src='https://placehold.co/100x100/f3f4f6/374151?text=IMG'"
+                                alt="<?= e($p['name']) ?>" class="w-14 h-14 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl object-cover shadow-lg ring-2 ring-gray-200 hover:ring-blue-400 transition cursor-pointer">
                         </td>
-                        <td class="py-4 px-4 text-base font-semibold text-gray-800 max-w-xs truncate">
+                        <td class="py-3 sm:py-5 px-2 sm:px-4 text-xs sm:text-base font-semibold text-gray-800 max-w-[120px] sm:max-w-xs truncate">
                             <?= e($p['name']) ?>
                             <?php if ($p['is_active'] == 0): ?>
-                                <span class="ml-2 text-xs font-bold bg-gray-300 text-gray-700 px-2 py-0.5 rounded-full">ARSIP</span>
+                                <span class="ml-1 sm:ml-2 text-[9px] sm:text-xs font-bold bg-gray-300 text-gray-700 px-1.5 sm:px-2 py-0.5 rounded-full">ARSIP</span>
                             <?php endif; ?>
                         </td>
-                        <td class="py-4 px-4 text-base <?= $p['is_active'] == 1 ? 'text-blue-600 font-extrabold' : 'text-gray-500 font-medium' ?>">Rp<?= number_format($p['price'], 0, ',', '.') ?></td>
-                        <td class="py-4 px-4 text-center space-x-2 flex items-center justify-center">
-                            <!-- Tombol Edit (Baru) -->
-                            <button 
-                                data-id="<?= $p['id'] ?>" 
-                                data-name="<?= e($p['name']) ?>" 
-                                data-price="<?= $p['price'] ?>"
-                                data-stock="<?= $p['stock'] ?>"
-                                data-description="<?= e($p['description'] ?? '') ?>"
-                                data-image="<?= e($p['image']) ?>"
-                                class="edit-btn text-blue-500 hover:text-blue-700 font-semibold px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 transition duration-150 text-sm">
-                                Edit
-                            </button>
+                        <td class="py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-base whitespace-nowrap <?= $p['is_active'] == 1 ? 'text-blue-600 font-extrabold' : 'text-gray-500 font-medium' ?>">Rp<?= number_format($p['price'], 0, ',', '.') ?></td>
+                        <td class="py-3 sm:py-4 px-2 sm:px-4 text-center">
+                            <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2">
+                                <!-- Tombol Edit (Baru) -->
+                                <button 
+                                    data-id="<?= $p['id'] ?>" 
+                                    data-name="<?= e($p['name']) ?>" 
+                                    data-price="<?= $p['price'] ?>"
+                                    data-stock="<?= $p['stock'] ?>"
+                                    data-description="<?= e($p['description'] ?? '') ?>"
+                                    data-image="<?= e($p['image']) ?>"
+                                    class="edit-btn text-blue-500 hover:text-blue-700 font-semibold px-2 sm:px-3 py-1 rounded-md sm:rounded-lg bg-blue-50 hover:bg-blue-100 transition duration-150 text-[10px] sm:text-sm whitespace-nowrap">
+                                    Edit
+                                </button>
                             
-                            <?php if ($p['is_active'] == 1): ?>
-                                <!-- Tombol Arsip -->
-                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="archive" class="action-btn text-orange-600 hover:text-orange-700 font-semibold px-3 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 transition duration-150 text-sm">
-                                    Arsip
-                                </button>
-                            <?php else: ?>
-                                <!-- Tombol Aktifkan kembali -->
-                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="activate" class="action-btn text-green-600 hover:text-green-700 font-semibold px-3 py-1 rounded-lg bg-green-50 hover:bg-green-100 transition duration-150 text-sm">
-                                    Aktifkan
-                                </button>
-                                <!-- Tombol Delete Permanen (hanya untuk produk non-aktif) -->
-                                <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="delete" class="action-btn text-red-600 hover:text-red-700 font-semibold px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 transition duration-150 text-sm">
-                                    Hapus
-                                </button>
-                            <?php endif; ?>
+                                <?php if ($p['is_active'] == 1): ?>
+                                    <!-- Tombol Arsip -->
+                                    <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="archive" class="action-btn text-orange-600 hover:text-orange-700 font-semibold px-2 sm:px-3 py-1 rounded-md sm:rounded-lg bg-orange-50 hover:bg-orange-100 transition duration-150 text-[10px] sm:text-sm whitespace-nowrap">
+                                        Arsip
+                                    </button>
+                                <?php else: ?>
+                                    <!-- Tombol Aktifkan kembali -->
+                                    <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="activate" class="action-btn text-green-600 hover:text-green-700 font-semibold px-2 sm:px-3 py-1 rounded-md sm:rounded-lg bg-green-50 hover:bg-green-100 transition duration-150 text-[10px] sm:text-sm whitespace-nowrap">
+                                        Aktifkan
+                                    </button>
+                                    <!-- Tombol Delete Permanen (hanya untuk produk non-aktif) -->
+                                    <button data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-action="delete" class="action-btn text-red-600 hover:text-red-700 font-semibold px-2 sm:px-3 py-1 rounded-md sm:rounded-lg bg-red-50 hover:bg-red-100 transition duration-150 text-[10px] sm:text-sm whitespace-nowrap">
+                                        Hapus
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>

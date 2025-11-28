@@ -1,0 +1,40 @@
+<?php
+// Start session hanya jika belum aktif
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Database
+define('DB_HOST', '127.0.0.1');
+define('DB_NAME', 'cafe_ordering');   
+define('DB_USER', 'root');     
+define('DB_PASS', '');        
+
+try {
+    $pdo = new PDO(
+        "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4",
+        DB_USER,
+        DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+} catch (PDOException $e) {
+    die("DB Connection failed: " . $e->getMessage());
+}
+
+// Midtrans (sandbox)
+// ... (isi file config.php) ...
+define('MIDTRANS_SERVER_KEY', 'YOUR_MIDTRANS_SERVER_KEY');
+define('MIDTRANS_IS_PRODUCTION', false); 
+// BASE_URL - Ganti dengan IP address untuk akses dari smartphone
+// Development: gunakan IP local
+// WiFi Router: 192.168.1.27
+// Hotspot iPhone: 172.20.10.2
+// Current IP: 192.168.1.52 (Updated: 2025-11-18)
+// AUTO DETECT IP
+$server_ip = getHostByName(getHostName());
+$base_url = "http://".$server_ip."/cafe_ordering/public";
+
+define('BASE_URL', $base_url);
+
+
+// Hapus '}' ekstra di akhir file

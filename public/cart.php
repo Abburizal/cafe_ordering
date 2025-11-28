@@ -47,7 +47,7 @@ $table_display = $_SESSION['table_number'] ?? ($_SESSION['table_id'] ?? 'Tidak D
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Keranjang Belanja - RestoKu</title>
+<title>Keranjang Belanja - Kantin Akademi MD</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
@@ -102,59 +102,70 @@ $table_display = $_SESSION['table_number'] ?? ($_SESSION['table_id'] ?? 'Tidak D
     </div>
     <?php else: ?>
     
-    <!-- Tabel Keranjang (Responsive via styling) -->
-    <div class="overflow-x-auto shadow-lg rounded-xl border border-gray-100 mb-6">
-        <table class="w-full text-left bg-white">
-        <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
-            <tr>
-            <th class="p-4 rounded-tl-xl">Produk</th>
-            <th class="p-4 text-center w-40">Qty</th>
-            <th class="p-4 text-right w-32">Subtotal</th>
-            <th class="p-4 text-center rounded-tr-xl w-20">Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($items as $it): ?>
-            <tr class="border-b hover:bg-gray-50 transition">
-                <td class="p-4 font-medium text-gray-900">
-                    <?= htmlspecialchars($it['product']['name']) ?>
-                    <p class="text-xs text-gray-500 mt-1"><?= currency($it['product']['price']) ?> per item</p>
-                </td>
-                <td class="p-4">
-                    <!-- Tombol + / - untuk Update Quantity -->
-                    <div class="flex items-center justify-center space-x-2">
+    <!-- Daftar Keranjang (Card Layout Modern) -->
+    <div class="space-y-3 mb-6">
+        <?php foreach($items as $it): ?>
+        <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg transition-shadow">
+            <!-- Layout Horizontal Flexbox -->
+            <div class="flex items-center gap-4">
+                
+                <!-- Gambar Produk (Kiri) -->
+                <div class="flex-shrink-0">
+                    <img src="assets/images/<?= e($it['product']['image']) ?>" 
+                         onerror="this.onerror=null; this.src='https://placehold.co/80x80/f3f4f6/374151?text=IMG'"
+                         alt="<?= e($it['product']['name']) ?>" 
+                         class="w-20 h-20 rounded-lg object-cover border-2 border-gray-100">
+                </div>
+                
+                <!-- Detail Produk (Tengah) - Flex Grow -->
+                <div class="flex-grow min-w-0">
+                    <h3 class="font-bold text-gray-900 text-base truncate mb-1">
+                        <?= htmlspecialchars($it['product']['name']) ?>
+                    </h3>
+                    <p class="text-xs text-gray-500 mb-2">
+                        <?= currency($it['product']['price']) ?> × <?= $it['qty'] ?>
+                    </p>
+                    
+                    <!-- Tombol Hapus Kecil (di bawah nama) -->
+                    <a href="update_cart.php?action=delete&id=<?= $it['product']['id'] ?>" 
+                       class="inline-flex items-center text-xs text-red-600 hover:text-red-700 font-medium transition"
+                       onclick="return confirm('Yakin ingin menghapus <?= htmlspecialchars($it['product']['name']) ?> dari keranjang?')">
+                        <i data-feather="trash-2" class="w-3 h-3 mr-1"></i>
+                        <span>Hapus</span>
+                    </a>
+                </div>
+                
+                <!-- Kontrol Qty & Harga (Kanan) -->
+                <div class="flex-shrink-0 text-right">
+                    <!-- Harga Subtotal -->
+                    <div class="font-bold text-indigo-600 text-lg mb-2 whitespace-nowrap">
+                        <?= currency($it['subtotal']) ?>
+                    </div>
+                    
+                    <!-- Kontrol Kuantitas -->
+                    <div class="flex items-center justify-end gap-2">
                         <!-- Tombol Minus -->
                         <a href="update_cart.php?action=decrease&id=<?= $it['product']['id'] ?>" 
-                           class="w-8 h-8 flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition transform hover:scale-110 active:scale-95"
+                           class="w-7 h-7 flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition active:scale-95"
                            title="Kurangi">
-                            <i data-feather="minus" class="w-4 h-4"></i>
+                            <i data-feather="minus" class="w-3.5 h-3.5"></i>
                         </a>
                         
-                        <!-- Display Quantity -->
-                        <span class="w-12 text-center font-bold text-lg text-gray-800"><?= $it['qty'] ?></span>
+                        <!-- Angka Quantity -->
+                        <span class="w-8 text-center font-bold text-base text-gray-800"><?= $it['qty'] ?></span>
                         
                         <!-- Tombol Plus -->
                         <a href="update_cart.php?action=increase&id=<?= $it['product']['id'] ?>" 
-                           class="w-8 h-8 flex items-center justify-center bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition transform hover:scale-110 active:scale-95"
+                           class="w-7 h-7 flex items-center justify-center bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition active:scale-95"
                            title="Tambah">
-                            <i data-feather="plus" class="w-4 h-4"></i>
+                            <i data-feather="plus" class="w-3.5 h-3.5"></i>
                         </a>
                     </div>
-                </td>
-                <td class="p-4 text-right font-semibold text-indigo-600"><?= currency($it['subtotal']) ?></td>
-                <td class="p-4 text-center">
-                    <!-- Tombol Hapus Item -->
-                    <a href="update_cart.php?action=delete&id=<?= $it['product']['id'] ?>" 
-                       class="inline-flex items-center justify-center w-9 h-9 bg-red-500 hover:bg-red-600 text-white rounded-lg transition transform hover:scale-110 active:scale-95"
-                       title="Hapus item"
-                       onclick="return confirm('Yakin ingin menghapus <?= htmlspecialchars($it['product']['name']) ?> dari keranjang?')">
-                        <i data-feather="trash-2" class="w-4 h-4"></i>
-                    </a>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-        </table>
+                </div>
+                
+            </div>
+        </div>
+        <?php endforeach; ?>
     </div>
 
     <!-- Total dan Checkout -->

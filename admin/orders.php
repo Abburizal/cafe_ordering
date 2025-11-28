@@ -222,33 +222,45 @@ $adminName = e($_SESSION['username']);
       <source src="data:audio/mp3;base64,SUQzBAAAAAAAAgEVAAAEVFRTUzAAAABJdmV0b3I6IExhdmYgNjMuMC4xMDAgU2VyaWVzIHRvb2xzIGZvciBMSlAtTVAzIFByb2plY3QgKENPUEVSQUQgQ1JFQVRJWkpPV04gU09MVVRJT04p" type="audio/mp3">
   </audio>
 
-  <!-- Navbar (tetap sama) -->
+  <!-- Navbar -->
   <header class="fixed top-3 left-0 right-0 z-50 flex justify-center">
     <div class="flex items-center justify-between w-[95%] md:w-[80%] lg:w-[70%] bg-white/80 backdrop-blur-lg border border-gray-200 rounded-3xl shadow-xl px-5 py-3 relative">
+      
+      <!-- Logo -->
       <div class="flex items-center space-x-2">
-        <i data-feather="coffee" class="h-6 w-6 text-indigo-600 stroke-[2]"></i>
+        <i data-feather="trello" class="h-6 w-6 text-indigo-600 stroke-[2]"></i>
         <span class="text-xl font-bold text-gray-800 hidden sm:inline">Admin Resto</span>
       </div>
+
+      <!-- Menu desktop -->
       <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
         <a href="dashboard.php" class="hover:text-indigo-600 transition">Dashboard</a>
         <a href="product.php" class="hover:text-indigo-600 transition">Produk</a>
         <a href="orders.php" class="text-indigo-600 font-semibold border-b-2 border-indigo-600 pb-1">Orders</a>
+        <a href="tables.php" class="hover:text-indigo-600 transition">Meja</a>
       </nav>
+
+      <!-- Aksi kanan -->
       <div class="hidden md:flex items-center space-x-3">
         <button id="requestNotificationBtn" class="px-4 py-2 rounded-xl bg-green-500 text-white text-sm hover:bg-green-600 font-medium transition shadow-md" title="Minta Izin Notifikasi">
             <i data-feather="bell" class="w-4 h-4 inline mr-1"></i> Izin Notif
         </button>
-        <a href="logout.php" class="px-4 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm hover:bg-indigo-100 font-medium transition">
+        <a href="logout.php" class="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm hover:bg-red-100 font-medium transition shadow-sm">
             <i data-feather="log-out" class="w-4 h-4 inline mr-1"></i> Sign out
         </a>
       </div>
+
+      <!-- Tombol menu mobile -->
       <button id="menuBtn" class="md:hidden flex items-center p-2 rounded-lg hover:bg-gray-100 focus:outline-none">
         <i data-feather="menu" id="menuIcon" class="h-6 w-6 text-gray-700"></i>
       </button>
+
+      <!-- Dropdown mobile -->
       <div id="dropdownMenu" class="hidden absolute top-16 right-4 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-2 text-sm z-50">
         <a href="dashboard.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Dashboard</a>
         <a href="product.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="package" class="w-4 h-4 mr-2"></i> Produk</a>
         <a href="orders.php" class="block px-4 py-2 bg-indigo-50 font-semibold text-indigo-700 flex items-center"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> Orders</a>
+        <a href="tables.php" class="block px-4 py-2 hover:bg-gray-100 flex items-center"><i data-feather="grid" class="w-4 h-4 mr-2"></i> Meja</a>
         <hr class="my-1">
         <a href="logout.php" class="block px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center"><i data-feather="log-out" class="w-4 h-4 mr-2"></i> Logout</a>
       </div>
@@ -423,146 +435,51 @@ $adminName = e($_SESSION['username']);
   <script>
     feather.replace();
 
-    // ==========================================================
-    // NOTIFIKASI & POLLING LOGIC
-    // ==========================================================
-
-    const notificationSound = document.getElementById('notificationSound');
-    // Menyimpan ID pesanan yang sedang 'pending' atau 'processing' di memori
-    let knownOrderIds = new Set(<?= json_encode(array_column(array_filter($orders, function($o) {
-        return in_array($o['status'], ['pending', 'processing']);
-    }), 'id')) ?>.map(id => parseInt(id)));
-
-    const POLLING_INTERVAL = 5000; // Cek setiap 5 detik
-    const NOTIFICATION_TITLE = "🔔 PESANAN BARU MASUK!";
+    // ==============================================
+    // REAL-TIME ORDER UPDATES FOR ORDERS PAGE
+    // ==============================================
     
-    const notificationStatusElement = document.getElementById('notificationStatus');
-    const lastUpdateElement = document.getElementById('lastUpdate');
-
-    // Minta Izin Notifikasi Web
-    function requestNotificationPermission() {
-        if (!("Notification" in window)) {
-            console.error("Browser tidak mendukung notifikasi.");
-            notificationStatusElement.textContent = "Browser tidak mendukung";
-            notificationStatusElement.className = "text-red-500";
-            return;
-        }
-
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                console.log("Izin notifikasi diberikan.");
-                notificationStatusElement.textContent = "Izin Diberikan";
-                notificationStatusElement.className = "text-green-500";
-            } else if (permission === "denied") {
-                console.log("Izin notifikasi ditolak.");
-                notificationStatusElement.textContent = "Izin Ditolak";
-                notificationStatusElement.className = "text-red-500";
-            } else {
-                notificationStatusElement.textContent = "Izin belum diberikan";
-                notificationStatusElement.className = "text-yellow-500";
-            }
-        });
-    }
-
-    // Tampilkan Notifikasi Web
-    function showWebNotification(order) {
-        if (Notification.permission === "granted") {
-            const body = `Kode: ${order.order_code} | Meja: ${order.table_name || 'N/A'}\nItem: ${order.items.map(i => i.qty + 'x ' + i.product_name).join(', ')}`;
-            
-            // Notifikasi Web
-            new Notification(NOTIFICATION_TITLE, {
-                body: body,
-                icon: 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" /></svg>')
-            });
-        }
-    }
-
-    // Main Polling Function
-    async function checkNewOrders() {
-        try {
-            // Panggil endpoint AJAX yang baru dibuat
-            const response = await fetch('orders.php?is_ajax=1', { 
-                method: 'GET',
-                headers: {'Accept': 'application/json'}
-            });
-            const data = await response.json();
-
-            if (data.success && data.orders) {
-                const currentOrderIds = new Set(data.orders.map(order => parseInt(order.id)));
-                const newOrders = [];
-                const newPendingOrders = [];
-                
-                // Cari Pesanan Baru
-                data.orders.forEach(order => {
-                    if (!knownOrderIds.has(parseInt(order.id))) {
-                        newOrders.push(order);
-                        knownOrderIds.add(parseInt(order.id));
-                        
-                        // Tandai sebagai pending baru untuk notifikasi
-                        if (order.status === 'pending') {
-                            newPendingOrders.push(order);
-                        }
-                    }
-                });
-
-                // Proses Notifikasi jika ada pesanan pending baru
-                if (newPendingOrders.length > 0) {
-                    notificationSound.play().catch(e => console.error("Gagal memutar suara:", e));
-                    newPendingOrders.forEach(order => {
-                        showWebNotification(order);
-                    });
-                }
-                
-                // Update tampilan (Opsional: Tambahkan highlight ke baris baru/pending)
-                updateUiOrders(data.orders);
-
-                lastUpdateElement.textContent = new Date().toLocaleTimeString('id-ID');
-            }
-        } catch (error) {
-            console.error('Error saat polling:', error);
-            lastUpdateElement.textContent = "Gagal (Error)";
-        }
-    }
-
-    // Fungsi untuk mengupdate UI (hanya highlight baris, tidak me-refresh tabel)
-    function updateUiOrders(currentOrders) {
-        currentOrders.forEach(order => {
-            const row = document.getElementById(`order-row-${order.id}`);
+    const realtimeManager = new RealtimeOrderManager({
+        pollInterval: 3000,
+        notificationEnabled: true,
+        soundEnabled: true,
+        debug: false,
+        
+        onOrderUpdate: (data) => {
+            updateOrdersTable(data.orders);
+        },
+        
+        onOrderStatusChange: (event) => {
+            const row = document.getElementById(`order-row-${event.orderId}`);
             if (row) {
-                // Tambahkan efek flash jika pending atau processing
-                if (order.status === 'pending' || order.status === 'processing') {
-                    row.classList.add('new-order-flash');
-                } else {
-                    row.classList.remove('new-order-flash');
-                }
+                row.classList.add('bg-yellow-50');
+                setTimeout(() => row.classList.remove('bg-yellow-50'), 2000);
             }
-        });
+            showNotificationPopup(`✅ Order ${event.orderCode}: ${event.oldStatus} → ${event.newStatus}`);
+        },
+        
+        onNewOrder: (order) => {
+            showNotificationPopup(`🔔 PESANAN BARU: ${order.order_code}`);
+        },
+        
+        onError: (error) => {
+            console.error('Real-time error:', error);
+        }
+    });
+
+    function showNotificationPopup(message) {
+        const popup = document.createElement('div');
+        popup.className = 'fixed top-5 right-5 bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold z-50 popup';
+        popup.innerHTML = message;
+        document.body.appendChild(popup);
+        
+        setTimeout(() => {
+            popup.style.opacity = '0';
+            popup.style.transform = 'scale(0.9)';
+            setTimeout(() => popup.remove(), 400);
+        }, 3000);
     }
 
-    // ==========================================================
-    // INITIALIZATION & EVENT LISTENERS
-    // ==========================================================
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // Cek status notifikasi saat dimuat
-        requestNotificationPermission();
-
-        // Tombol Izin Notifikasi
-        document.getElementById('requestNotificationBtn').addEventListener('click', requestNotificationPermission);
-        
-        // Mulai Polling setelah DOM siap
-        // Cek segera setelah load (untuk initial highlight)
-        checkNewOrders(); 
-        
-        // Polling loop
-        setInterval(checkNewOrders, POLLING_INTERVAL);
-    });
-    
-    // ==========================================================
-    // FUNGSI UTILITY LAMA (tetap dipertahankan)
-    // ==========================================================
-    
-    // Mapping status untuk tampilan
     const statusTextMap = {
         'pending': 'Pending',
         'processing': 'Diproses',
@@ -575,6 +492,23 @@ $adminName = e($_SESSION['username']);
         'done': 'bg-green-100 text-green-600',
         'cancelled': 'bg-red-100 text-red-600'
     };
+
+    function updateOrdersTable(orders) {
+        orders.forEach(order => {
+            const row = document.getElementById(`order-row-${order.id}`);
+            if (row) {
+                // Update status badge
+                const statusCell = row.querySelector('td:nth-child(5)');
+                if (statusCell) {
+                    const statusBadge = statusCell.querySelector('span');
+                    if (statusBadge) {
+                        statusBadge.textContent = statusTextMap[order.status];
+                        statusBadge.className = `px-3 py-1 rounded-full text-xs font-semibold ${statusClassMap[order.status]}`;
+                    }
+                }
+            }
+        });
+    }
 
     function currencyFormat(amount) {
         return new Intl.NumberFormat('id-ID', {
@@ -589,28 +523,21 @@ $adminName = e($_SESSION['username']);
         return new Date(dateString).toLocaleDateString('id-ID', options);
     }
 
-    /**
-     * Menampilkan modal dengan detail pesanan
-     * @param {object} order - Objek pesanan yang sudah di-encode dari PHP
-     */
     function showOrderDetails(order) {
         const modal = document.getElementById('orderDetailModal');
         
-        // Update Summary
         document.getElementById('modal-order-code').textContent = order.order_code;
         document.getElementById('modal-table').textContent = order.table_name || 'N/A';
         document.getElementById('modal-method').textContent = order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1);
         document.getElementById('modal-time').textContent = dateFormat(order.created_at);
         document.getElementById('modal-total').textContent = currencyFormat(order.total);
         
-        // Update Status Badge
         const statusBadge = document.getElementById('modal-status-text');
         statusBadge.textContent = statusTextMap[order.status];
         statusBadge.className = statusClassMap[order.status] + ' px-2 py-0.5 rounded-full text-xs font-semibold';
 
-        // Update Items
         const itemsBody = document.getElementById('modal-items-body');
-        itemsBody.innerHTML = ''; // Kosongkan isi sebelumnya
+        itemsBody.innerHTML = '';
 
         if (order.items.length === 0) {
             itemsBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Tidak ada item ditemukan.</td></tr>';
@@ -627,7 +554,6 @@ $adminName = e($_SESSION['username']);
             });
         }
 
-        // Tampilkan modal
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
@@ -638,8 +564,6 @@ $adminName = e($_SESSION['username']);
         }
     }
 
-
-    // Toggle menu mobile (tetap dipertahankan)
     const menuBtn = document.getElementById('menuBtn');
     const dropdown = document.getElementById('dropdownMenu');
     let open = false;
@@ -647,9 +571,32 @@ $adminName = e($_SESSION['username']);
         open = !open;
         dropdown.classList.toggle('hidden', !open);
     });
-  </script>
 
-  <!-- Notification handled by notification.js -->
-  <script src="assets/notification.js"></script>
+    // Start real-time updates when page is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        realtimeManager.requestNotificationPermission();
+        
+        // Get current filter status from URL or default to 'semua'
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentStatus = urlParams.get('status') || 'semua';
+        
+        realtimeManager.start('api/get_orders_realtime.php', {
+            status: currentStatus
+        });
+        
+        // Update last update time
+        setInterval(() => {
+            const lastUpdate = realtimeManager.getLastUpdate();
+            if (lastUpdate) {
+                const lastUpdateElement = document.getElementById('lastUpdate');
+                if (lastUpdateElement) {
+                    lastUpdateElement.textContent = lastUpdate.toLocaleTimeString('id-ID');
+                }
+            }
+        }, 1000);
+    });
+
+  </script>
+  <script src="assets/realtime-manager.js"></script>
 </body>
 </html>

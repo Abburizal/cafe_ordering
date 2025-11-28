@@ -36,7 +36,7 @@ $table_id = $_SESSION['table_id'] ?? null;
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menu Makanan & Minuman - RestoKu</title>
+  <title>Menu Makanan & Minuman - Kantin Akademi MD</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>

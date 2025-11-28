@@ -103,7 +103,7 @@ try {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scan QR Meja - RestoKu</title>
+    <title>Scan QR Meja - Kantin Akademi MD</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
@@ -184,7 +184,7 @@ try {
         
         <a href="index.php" class="text-2xl font-extrabold text-indigo-700 flex items-center group">
             <i data-feather="tablet" class="w-6 h-6 mr-2 text-orange-500 transition-transform duration-300 group-hover:rotate-12"></i>
-            RestoKu
+            Kantin Akademi MD
         </a>
 
         <button onclick="alert('Jika Anda mengalami masalah, silakan hubungi pelayan terdekat. Terima kasih!')" 

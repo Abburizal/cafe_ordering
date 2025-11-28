@@ -18,7 +18,7 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <title>Generate QR Code Meja - RestoKu</title>
+    <title>Generate QR Code Meja - Kantin Akademi MD</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -68,10 +68,20 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
                         );
                         
                         $writer = new PngWriter();
-                        $result = $writer->write($qrCode);
-                        
-                        // Tampilkan sebagai Data URI
-                        echo '<img src="' . $result->getDataUri() . '" alt="QR Code ' . htmlspecialchars($table['name']) . '" class="mx-auto rounded-lg shadow-md mb-4">';
+                        try {
+                            $result = $writer->write($qrCode);
+
+                            // Tampilkan sebagai Data URI
+                            echo '<img src="' . $result->getDataUri() . '" alt="QR Code ' . htmlspecialchars($table['name']) . '" class="mx-auto rounded-lg shadow-md mb-4">';
+                        } catch (\Exception $e) {
+                            // Show a helpful non-fatal error message so the admin can enable GD
+                            $errMsg = htmlspecialchars($e->getMessage());
+                            echo '<div class="mb-4 p-4 rounded-lg bg-red-50 border-l-4 border-red-400 text-red-700">';
+                            echo '<strong>Gagal membuat QR:</strong> ' . $errMsg;
+                            echo '<p class="text-sm mt-2">Jika pesan error terkait ekstensi GD, aktifkan ekstensi GD di XAMPP: buka <code>Config -> php.ini</code> pada XAMPP Control Panel atau edit <code>C:\\xampp\\php\\php.ini</code>, cari baris <code>;extension=gd</code> atau <code>;extension=gd2</code> dan hapus titik koma di depannya, lalu restart Apache.</p>';
+                            echo '<p class="text-sm mt-1">Atau jalankan file <code>phpinfo()</code> untuk memverifikasi. (File sementara: <code>test_gd.php</code>)</p>';
+                            echo '</div>';
+                        }
                     ?>
                     <div class="bg-gray-50 py-2 px-4 rounded-lg mb-2">
                         <p class="text-sm font-semibold text-gray-700">Kode: <code class="bg-gray-200 px-2 py-1 rounded"><?= htmlspecialchars($table['code']) ?></code></p>
@@ -83,7 +93,7 @@ $tables = $pdo->query("SELECT * FROM tables ORDER BY id")->fetchAll(PDO::FETCH_A
 
         <!-- Footer -->
         <div class="text-center mt-8 text-gray-600 text-sm no-print">
-            <p>© <?= date('Y') ?> RestoKu - Sistem QR Code Check-in</p>
+            <p>© <?= date('Y') ?> Kantin Akademi MD - Sistem QR Code Check-in</p>
         </div>
     </div>
 </body>

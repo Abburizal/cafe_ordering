@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: cafe-ordering
+    env: php
+    plan: free
+    
+    # PHP Server Configuration
+    startCommand: php -S 0.0.0.0:${PORT:-8000}
+    
+    # Build Configuration
+    buildCommand: |
+      if [ -f composer.json ]; then
+        curl -sS https://getcomposer.org/installer | php
+        php composer.phar install --no-dev --optimize-autoloader
+      fi
+      
+      # Create necessary directories
+      mkdir -p tmp cache
+      chmod -R 755 tmp cache
+    
+    # Routes Configuration
+    routes:
+      - path: /
+        matchType: prefix
+    
+    # Environment Variables from Database
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: cafe-ordering
+          property: host
+      
+      - key: DB_USER
+        fromDatabase:
+          name: cafe-ordering
+          property: user
+      
+      - key: DB_PASS
+        fromDatabase:
+          name: cafe-ordering
+          property: password
+      
+      - key: DB_NAME
+        value: cafe_ordering
+      
+      - key: APP_ENV
+        value: production
+      
+      - key: APP_DEBUG
+        value: "false"
+      
+      - key: SESSION_NAME
+        value: CAFE_ORDERING_SESSION
+    
+    # Health Check
+    healthCheckPath: /admin/login.php
+    
+    # Auto-deploy on push
+    autoDeploy: true
+
+# Database Configuration
+databases:
+  - name: cafe-ordering
+    engine: mysql
+    version: "8.0"
+    plan: free
+    databaseName: cafe_ordering
+    user: cafe_admin
+    # Password will be auto-generated and set as environment variable

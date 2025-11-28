@@ -1,5 +1,8 @@
 <?php
-session_start();
+// Start session hanya jika belum aktif
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require '../config/config.php';
 require '../app/helpers.php';
 
@@ -61,6 +64,7 @@ $status_colors = [
     <title>Status Pesanan #<?= $order['order_code'] ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="../admin/assets/realtime-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -314,51 +318,71 @@ $status_colors = [
 
         let currentStatus = '<?= $order['status'] ?>';
 
-        async function checkStatus() {
-            try {
-                const response = await fetch(`api/get_status.php?order_id=${orderId}`);
-                const data = await response.json();
+        // ========================================================
+        // REAL-TIME ORDER STATUS MANAGER UNTUK CUSTOMER
+        // ========================================================
+        
+        const realtimeManager = new RealtimeOrderManager({
+            pollInterval: 3000, // Polling setiap 3 detik
+            notificationEnabled: true,
+            soundEnabled: true,
+            debug: false,
+            
+            onOrderStatusChange: (event) => {
+                // Update UI saat status berubah
+                updateCustomerUI(event.newStatus);
+                showNotification('✅ Status Pesanan Berubah', `Pesanan Anda sekarang: ${statusMap[event.newStatus]}`);
                 
-                if (data.status && data.status !== currentStatus) {
-                    // Status changed!
-                    currentStatus = data.status;
-                    
-                    // Update badge
-                    statusBadge.className = 'px-6 py-4 rounded-xl border-2 font-bold text-center text-xl ' + statusColors[currentStatus];
-                    statusText.textContent = statusMap[currentStatus];
-                    
-                    // Update message
-                    statusMessage.innerHTML = '<p class="text-center">' + statusMessages[currentStatus] + '</p>';
-                    
-                    // Add flash effect
-                    statusBadge.classList.add('animate-pulse');
-                    setTimeout(() => statusBadge.classList.remove('animate-pulse'), 1000);
-                    
-                    // Reload icons
-                    feather.replace();
-                    
-                    // Show notification
-                    showNotification('Status Updated', `Pesanan Anda sekarang: ${statusMap[currentStatus]}`);
+                // Jika selesai, reload halaman setelah 2 detik
+                if (event.newStatus === 'done') {
+                    setTimeout(() => location.reload(), 2000);
                 }
                 
-                // Continue polling if not done or cancelled
-                if (currentStatus !== 'done' && currentStatus !== 'cancelled') {
-                    setTimeout(checkStatus, 5000);
-                } else {
-                    // If done, show confetti or celebration
-                    if (currentStatus === 'done') {
-                        setTimeout(() => location.reload(), 2000);
+                // Jika dibatalkan, hentikan polling
+                if (event.newStatus === 'cancelled') {
+                    realtimeManager.stop();
+                }
+            },
+            
+            onOrderUpdate: (data) => {
+                // Cek jika order sudah selesai atau dibatalkan, hentikan polling
+                if (data.orders.length > 0) {
+                    const order = data.orders[0];
+                    if (order.status === 'done' || order.status === 'cancelled') {
+                        realtimeManager.stop();
                     }
                 }
-            } catch (error) {
-                console.error('Error checking status:', error);
-                setTimeout(checkStatus, 10000); // Retry after 10 seconds
+            },
+            
+            onError: (error) => {
+                console.error('Real-time error:', error);
             }
+        });
+
+        function updateCustomerUI(newStatus) {
+            currentStatus = newStatus;
+            
+            // Update status badge
+            statusBadge.className = 'px-6 py-4 rounded-xl border-2 font-bold text-center text-xl ' + statusColors[newStatus];
+            statusText.textContent = statusMap[newStatus];
+            
+            // Update status message
+            statusMessage.innerHTML = '<p class="text-center">' + statusMessages[newStatus] + '</p>';
+            
+            // Add flash effect
+            statusBadge.classList.add('animate-pulse');
+            setTimeout(() => statusBadge.classList.remove('animate-pulse'), 1000);
+            
+            // Reload feather icons
+            feather.replace();
         }
 
         function showNotification(title, message) {
             if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(title, { body: message, icon: '/favicon.ico' });
+                new Notification(title, {
+                    body: message,
+                    tag: 'order-status-' + orderId
+                });
             }
         }
 
@@ -367,8 +391,12 @@ $status_colors = [
             Notification.requestPermission();
         }
 
-        // Start polling after 5 seconds
-        setTimeout(checkStatus, 5000);
+        // Start real-time polling
+        document.addEventListener('DOMContentLoaded', () => {
+            realtimeManager.start(`api/get_order_status_realtime.php`, {
+                order_id: orderId
+            });
+        });
     </script>
 </body>
 </html>

@@ -9,7 +9,7 @@ require_once '../../config/config.php';
 // Konfigurasi admin default
 $admin_username = 'admin';
 $admin_password = 'admin123';  // Password default
-$admin_email = 'admin@restoku.com';
+$admin_email = 'admin@kantinakademimd.com';
 
 echo "<!DOCTYPE html>
 <html lang='id'>

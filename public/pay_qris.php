@@ -131,7 +131,7 @@ if (!$error_message) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bayar dengan QRIS - RestoKu</title>
+  <title>Bayar dengan QRIS - Kantin Akademi MD</title>
   <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
@@ -141,7 +141,7 @@ if (!$error_message) {
   </style>
 </head>
 <body class="bg-gradient-to-br from-indigo-50 to-orange-50 min-h-screen flex items-center justify-center p-4">
-  <div class="max-w-md w-full mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-2xl text-center">
+  <div class="max-w-md w-full mx-auto bg-white p-8 sm:p-10 rounded-2xl shadow-2xl text-center">
     
     <?php if ($error_message): ?>
         <!-- Tampilan Error -->
@@ -155,50 +155,119 @@ if (!$error_message) {
         </div>
     <?php else: ?>
         <!-- Tampilan Sukses (QRIS) -->
-        <i data-feather="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
-        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2">
+        <i data-feather="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-6"></i>
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-4">
           Order Diterima!
         </h1>
-        <p class="text-gray-600 mb-6">Silakan scan QR Code di bawah ini untuk menyelesaikan pembayaran.</p>
 
-        <div class="mb-6 p-5 bg-indigo-50 rounded-xl shadow-inner border-l-4 border-indigo-500 text-left">
-            <div class="text-lg font-bold text-gray-800 mb-2 flex justify-between items-center">
-                <span>Nomor Meja:</span>
-                <strong class="text-indigo-900"><?= htmlspecialchars($table_number) ?></strong>
+        <!-- Total Bayar - Tipografi Diperbaiki -->
+        <div class="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-md border-2 border-blue-200">
+            <div class="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Total Pembayaran</div>
+            <div class="flex items-baseline justify-center space-x-1">
+                <span class="text-2xl font-bold text-blue-600">Rp</span>
+                <span class="text-5xl font-bold text-blue-600"><?= number_format($total_amount, 0, ',', '.') ?></span>
             </div>
-            <div class="font-bold text-gray-800 flex justify-between items-center">
-                <span class="text-xl">Total Bayar:</span>
-                <div class="text-4xl font-extrabold text-orange-600">
-                    <?= currency($total_amount) ?>
-                </div>
+            <div class="text-sm text-gray-600 mt-3 font-medium">
+                Meja: <span class="font-bold text-indigo-900"><?= htmlspecialchars($table_number) ?></span>
             </div>
         </div>
 
         <!-- Tampilkan QR Code -->
-        <div class="flex justify-center mb-6">
-            <img src="<?= $qr_code_data_uri ?>" alt="QR Code Pembayaran" class="border-4 border-gray-300 rounded-lg shadow-md">
+        <div class="mb-8">
+            <img id="qrCodeImage" src="<?= $qr_code_data_uri ?>" alt="QR Code Pembayaran" class="mx-auto border-4 border-gray-300 rounded-2xl shadow-lg">
         </div>
 
-        <p class="text-sm text-gray-500 mb-4">
-          Setelah membayar, klik tombol di bawah untuk konfirmasi pembayaran.
-        </p>
+        <!-- Instruksi Pembayaran - UX Diperbaiki -->
+        <div class="mb-8 bg-orange-50 border-l-4 border-orange-400 p-5 rounded-lg text-left">
+            <div class="flex items-start space-x-3">
+                <i data-feather="info" class="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5"></i>
+                <div class="text-sm text-gray-700">
+                    <p class="font-semibold text-orange-800 mb-2">Cara Bayar:</p>
+                    <ol class="list-decimal list-inside space-y-1.5 text-gray-700">
+                        <li>Simpan QR code dengan tombol di bawah, atau</li>
+                        <li>Buka aplikasi e-wallet (GoPay, OVO, Dana, dll)</li>
+                        <li>Pilih menu Bayar/Scan dan upload gambar QR</li>
+                        <li>Konfirmasi pembayaran di aplikasi</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
 
-        <!-- Tombol Konfirmasi Pembayaran -->
-        <form action="confirm_payment.php" method="POST" class="mb-4">
-            <input type="hidden" name="order_id" value="<?= $order_id ?>">
-            <input type="hidden" name="payment_method" value="qris">
-            <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition shadow-lg flex items-center justify-center space-x-2">
-                <i data-feather="check-circle" class="w-5 h-5"></i>
-                <span>Konfirmasi Pembayaran Sudah Dilakukan</span>
+        <!-- Tombol Aksi - UX Diperbaiki -->
+        <div class="space-y-3 mb-6">
+            <button onclick="downloadQRCode()" class="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-xl hover:from-orange-600 hover:to-orange-700 transition shadow-lg flex items-center justify-center space-x-2">
+                <i data-feather="download" class="w-5 h-5"></i>
+                <span>Simpan QR ke Galeri</span>
             </button>
-        </form>
+            
+            <button onclick="shareQRCode()" class="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition shadow-lg flex items-center justify-center space-x-2">
+                <i data-feather="share-2" class="w-5 h-5"></i>
+                <span>Bayar dengan E-Wallet</span>
+            </button>
+        </div>
 
-        <a href="order_status.php?order_id=<?= $order_id ?>" class="w-full inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg">
-          Cek Status Pesanan Saya
-        </a>
+        <div class="border-t pt-6 space-y-3">
+            <!-- Tombol Konfirmasi Pembayaran -->
+            <form action="confirm_payment.php" method="POST">
+                <input type="hidden" name="order_id" value="<?= $order_id ?>">
+                <input type="hidden" name="payment_method" value="qris">
+                <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition shadow-lg flex items-center justify-center space-x-2">
+                    <i data-feather="check-circle" class="w-5 h-5"></i>
+                    <span>Sudah Bayar, Konfirmasi Sekarang</span>
+                </button>
+            </form>
+
+            <a href="order_status.php?order_id=<?= $order_id ?>" class="w-full inline-flex items-center justify-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition">
+                <i data-feather="eye" class="w-5 h-5"></i>
+                <span>Cek Status Pesanan</span>
+            </a>
+        </div>
     <?php endif; ?>
 
   </div>
-  <script>feather.replace();</script>
+  <script>
+    feather.replace();
+
+    // Fungsi download QR code
+    function downloadQRCode() {
+        const qrImage = document.getElementById('qrCodeImage');
+        const link = document.createElement('a');
+        link.href = qrImage.src;
+        link.download = 'QR_Pembayaran_<?= $order_id ?>.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Fungsi share QR code (Web Share API)
+    async function shareQRCode() {
+        const qrImage = document.getElementById('qrCodeImage');
+        
+        try {
+            // Coba gunakan Web Share API jika tersedia
+            if (navigator.share && navigator.canShare) {
+                // Convert data URI to blob
+                const response = await fetch(qrImage.src);
+                const blob = await response.blob();
+                const file = new File([blob], 'QR_Pembayaran.png', { type: 'image/png' });
+                
+                await navigator.share({
+                    title: 'QR Pembayaran',
+                    text: 'Scan QR ini untuk membayar pesanan',
+                    files: [file]
+                });
+            } else {
+                // Fallback: download saja
+                downloadQRCode();
+                alert('QR code berhasil disimpan! Silakan buka aplikasi e-wallet Anda dan upload gambar QR.');
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                downloadQRCode();
+                alert('QR code berhasil disimpan! Silakan buka aplikasi e-wallet Anda dan upload gambar QR.');
+            }
+        }
+    }
+  </script>
 </body>
 </html>

@@ -238,6 +238,7 @@ $statusClassMap = [
     👋 Selamat datang, **<?= $adminName ?>**! Semangat bekerja 😄
   </div>
 
+  <script src="assets/realtime-manager.js"></script>
   <script>
     feather.replace();
 
@@ -257,7 +258,7 @@ $statusClassMap = [
         popup.style.opacity = '0';
         popup.style.transform = 'scale(0.9)';
         setTimeout(() => popup.remove(), 400);
-      }, 3000); // Tampilkan sedikit lebih lama
+      }, 3000);
     }
 
     // Dropdown mobile toggle
@@ -265,12 +266,10 @@ $statusClassMap = [
     const dropdown = document.getElementById('dropdownMenu');
     let open = false;
     
-    // Toggling function
     const toggleDropdown = () => {
         open = !open;
         if (open) {
             dropdown.classList.remove('hidden');
-            // Adding a timeout to allow CSS transition if needed
             setTimeout(() => {
                 dropdown.style.opacity = '1';
                 dropdown.style.transform = 'translateY(0)';
@@ -280,23 +279,87 @@ $statusClassMap = [
             dropdown.style.transform = 'translateY(-10px)';
             setTimeout(() => {
                 dropdown.classList.add('hidden');
-            }, 300); // Match transition duration
+            }, 300);
         }
     };
     
-    // Initial setup for transition
     dropdown.style.transition = 'all 0.3s ease';
     dropdown.style.opacity = '0';
     dropdown.style.transform = 'translateY(-10px)';
 
     menuBtn.addEventListener('click', toggleDropdown);
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', (event) => {
         const isClickInside = dropdown.contains(event.target) || menuBtn.contains(event.target);
         if (!isClickInside && open) {
             toggleDropdown();
         }
+    });
+
+    // ==============================================
+    // REAL-TIME DASHBOARD UPDATE
+    // ==============================================
+    const realtimeManager = new RealtimeOrderManager({
+        pollInterval: 3000,
+        notificationEnabled: true,
+        soundEnabled: true,
+        debug: false,
+        
+        onOrderUpdate: (data) => {
+            // Update metrik real-time
+            updateDashboardMetrics(data.orders);
+        },
+        
+        onOrderStatusChange: (event) => {
+            showNotificationPopup(`✅ Order #${event.orderCode}: ${event.oldStatus} → ${event.newStatus}`);
+        },
+        
+        onNewOrder: (order) => {
+            showNotificationPopup(`🔔 Pesanan Baru: ${order.order_code}`);
+        },
+        
+        onError: (error) => {
+            console.error('Real-time error:', error);
+        }
+    });
+
+    function showNotificationPopup(message) {
+        const popup = document.createElement('div');
+        popup.className = 'fixed top-5 right-5 bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold z-50 popup';
+        popup.innerHTML = message;
+        document.body.appendChild(popup);
+        
+        setTimeout(() => {
+            popup.style.opacity = '0';
+            popup.style.transform = 'scale(0.9)';
+            setTimeout(() => popup.remove(), 400);
+        }, 3000);
+    }
+
+    function updateDashboardMetrics(orders) {
+        // Hitung ulang metrik dari data real-time
+        const today = new Date().toISOString().split('T')[0];
+        
+        let pendapatanHari = 0;
+        orders.forEach(order => {
+            if (order.created_at && order.created_at.startsWith(today) && ['done', 'processing'].includes(order.status)) {
+                pendapatanHari += parseFloat(order.total);
+            }
+        });
+        
+        // Update card pendapatan hari ini
+        const cardPendapatan = document.querySelector('.grid.grid-cols-1 .bg-white:first-child h3');
+        if (cardPendapatan) {
+            cardPendapatan.textContent = currency(pendapatanHari);
+        }
+    }
+
+    // Mulai real-time polling saat halaman siap
+    document.addEventListener('DOMContentLoaded', () => {
+        realtimeManager.requestNotificationPermission();
+        realtimeManager.start('api/get_orders_realtime.php', {
+            status: 'semua'
+        });
     });
 
   </script>
