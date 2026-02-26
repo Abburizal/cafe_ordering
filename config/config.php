@@ -1,17 +1,17 @@
 <?php
 /**
- * Database Configuration - Render.com Compatible
+ * Database Configuration - InfinityFree Compatible
  */
 
-// Get environment variables with fallbacks
-$host = getenv('DB_HOST') ?: (getenv('MYSQL_HOST') ?: 'localhost');
-$db = getenv('DB_NAME') ?: (getenv('MYSQL_DATABASE') ?: 'cafe_ordering');
-$user = getenv('DB_USER') ?: (getenv('MYSQL_USER') ?: 'root');
-$pass = getenv('DB_PASS') ?: (getenv('MYSQL_PASSWORD') ?: '');
+// Database configuration for InfinityFree
+$host = "sql300.infinityfree.com";
+$db   = "if0_40547438_cafe_ordering";
+$user = "if0_40547438";
+$pass = "NGPrn9phhvw";  // Gunakan password cPanel Anda
 
 // Error handling
-if (!$host || !$db || !$user) {
-    error_log("Database configuration incomplete. Check environment variables.");
+if (!$host || !$db || !$user || !$pass) {
+    error_log("Database configuration incomplete. Check database credentials.");
     die("Database configuration error. Contact administrator.");
 }
 
@@ -28,13 +28,11 @@ try {
         ]
     );
     
-    // Log successful connection (only in dev)
-    if (getenv('APP_ENV') !== 'production') {
-        error_log("Database connected: $host / $db");
-    }
+    // Log successful connection
+    error_log("Database connected successfully: $host / $db");
     
 } catch (PDOException $e) {
     error_log("PDO Connection Error: " . $e->getMessage());
-    die("Database connection failed. Contact administrator.");
+    die("Database connection failed. Please check your database configuration.");
 }
 ?>

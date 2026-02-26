@@ -20,15 +20,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_table'])) {
     $code = trim($_POST['code']);
     
     if (!empty($name) && !empty($code)) {
-        try {
-            $stmt = $pdo->prepare("INSERT INTO tables (name, code) VALUES (?, ?)");
-            $stmt->execute([$name, $code]);
-            $success = "Meja berhasil ditambahkan!";
-        } catch (PDOException $e) {
-            $error = "Gagal menambahkan meja: " . $e->getMessage();
+        // ✅ VALIDASI: Cek Duplikat Nomor Meja
+        $checkName = $pdo->prepare("SELECT id FROM tables WHERE name = ?");
+        $checkName->execute([$name]);
+        
+        // ✅ VALIDASI: Cek Duplikat Code
+        $checkCode = $pdo->prepare("SELECT id FROM tables WHERE code = ?");
+        $checkCode->execute([$code]);
+        
+        if ($checkName->fetch()) {
+            $error = "⚠️ Nomor Meja sudah terdaftar. Silakan gunakan nomor lain.";
+        } elseif ($checkCode->fetch()) {
+            $error = "⚠️ Kode Meja sudah terdaftar. Silakan gunakan kode lain.";
+        } else {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO tables (name, code) VALUES (?, ?)");
+                $stmt->execute([$name, $code]);
+                $success = "✅ Data meja tersimpan dan siap untuk di-generate QR Code!";
+            } catch (PDOException $e) {
+                $error = "⚠️ Gagal menambahkan meja: " . $e->getMessage();
+            }
         }
     } else {
-        $error = "Nama dan kode meja harus diisi!";
+        $error = "⚠️ Nama dan kode meja harus diisi!";
     }
 }
 

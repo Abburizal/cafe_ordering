@@ -28,29 +28,47 @@ if (isset($_POST['add'])) {
     $name = trim($_POST['name']);
     $price = trim($_POST['price']);
     $image = $_FILES['image']['name'] ?? '';
-    // Gunakan nilai default jika stock atau description tidak disediakan di form
     $stock = (int)($_POST['stock'] ?? 100); 
     $description = trim($_POST['description'] ?? NULL);
 
-    if ($name !== '' && $price !== '' && $image !== '') {
-        $targetDir = "../public/assets/images/";
-        
-        // Sanitize filename and add timestamp for uniqueness
-        $sanitizedName = sanitizeFilename($image);
-        $uniqueImageName = time() . '_' . $sanitizedName;
-        $targetFile = $targetDir . $uniqueImageName;
-        
-        // Move uploaded file
-        if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
-            // Menambahkan kolom is_active=1 secara default
-            $stmt = $pdo->prepare("INSERT INTO products (name, price, image, stock, description, is_active) VALUES (?, ?, ?, ?, ?, 1)");
-            $stmt->execute([$name, $price, $uniqueImageName, $stock, $description]);
-            $message = "🎉 Produk baru berhasil ditambahkan!";
-        } else {
-            $message = "⚠️ Gagal mengupload gambar!";
-        }
+    // ✅ VALIDASI FIELD WAJIB
+    if ($name === '') {
+        $message = "⚠️ Bidang Nama Produk wajib diisi!";
+    } elseif ($price === '') {
+        $message = "⚠️ Bidang Harga wajib diisi!";
+    } elseif ($image === '') {
+        $message = "⚠️ Gambar produk wajib diupload!";
     } else {
-        $message = "⚠️ Nama, Harga, dan Gambar wajib diisi!";
+        // ✅ VALIDASI FORMAT FILE GAMBAR
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $fileExtension = strtolower(pathinfo($image, PATHINFO_EXTENSION));
+        
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            $message = "⚠️ Format file harus JPG, PNG, GIF, atau WEBP!";
+        } else {
+            // ✅ VALIDASI UKURAN FILE (max 5MB)
+            $maxFileSize = 5 * 1024 * 1024; // 5MB
+            if ($_FILES['image']['size'] > $maxFileSize) {
+                $message = "⚠️ Ukuran file maksimal 5MB!";
+            } else {
+                $targetDir = "../public/assets/images/";
+                
+                // Sanitize filename and add timestamp for uniqueness
+                $sanitizedName = sanitizeFilename($image);
+                $uniqueImageName = time() . '_' . $sanitizedName;
+                $targetFile = $targetDir . $uniqueImageName;
+                
+                // Move uploaded file
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+                    // Menambahkan kolom is_active=1 secara default
+                    $stmt = $pdo->prepare("INSERT INTO products (name, price, image, stock, description, is_active) VALUES (?, ?, ?, ?, ?, 1)");
+                    $stmt->execute([$name, $price, $uniqueImageName, $stock, $description]);
+                    $message = "✅ Berhasil Menambahkan Menu! Produk berhasil disimpan.";
+                } else {
+                    $message = "⚠️ Gagal mengupload gambar!";
+                }
+            }
+        }
     }
 }
 

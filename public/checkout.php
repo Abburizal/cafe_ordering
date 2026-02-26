@@ -7,6 +7,14 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
+// ✅ FITUR BARU: Cek apakah user sudah login
+if (!isset($_SESSION['user_id'])) {
+    // Simpan URL tujuan untuk redirect setelah login
+    $return_url = urlencode($_SERVER['REQUEST_URI']);
+    header('Location: login.php?return_url=' . $return_url);
+    exit;
+}
+
 $cart = $_SESSION['cart'] ?? [];
 $table_id = $_SESSION['table_id'] ?? null;
 $table_number = $_SESSION['table_number'] ?? null; // Kunci yang dinormalisasi
